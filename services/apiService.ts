@@ -1,4 +1,4 @@
-import { mockApi } from "./mocks"
+import { INITIAL_ASSIGNMENTS, INITIAL_PROJECTS, INITIAL_RESOURCES, INITIAL_TASKS, INITIAL_TEAM, mockApi } from "./mocks"
 import type {
   Project,
   Task,
@@ -28,6 +28,21 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     throw new Error(`API error: ${response.statusText}`)
   }
   return response.json()
+}
+export const bootstrap = async () => {
+  if (USE_MOCKS) {
+    const projects = INITIAL_PROJECTS
+    const tasks = INITIAL_TASKS
+    const resources = INITIAL_RESOURCES
+    const teamMembers = INITIAL_TEAM
+    const resourceAssignments = INITIAL_ASSIGNMENTS
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ projects, tasks, resources, teamMembers, resourceAssignments })
+      }, 500) // Retraso de 500ms para simular latencia de red
+    })
+  }
+  return await apiFetch("/bootstrap")
 }
 
 // --- API de Proyectos ---

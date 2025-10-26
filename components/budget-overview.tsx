@@ -113,7 +113,7 @@ export function BudgetOverview({ project, tasks, resources, assignments }: Budge
       {remainingBudget < 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
           <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg mb-6">
-            <AlertCircleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertCircleIcon className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
             <div>
               <h4 className="font-semibold text-red-500 mb-1">Presupuesto Excedido</h4>
               <p className="text-sm text-red-500/80">

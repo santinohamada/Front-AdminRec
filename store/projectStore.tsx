@@ -8,6 +8,7 @@ import {
   resourceService,
   teamService,
   assignmentService,
+  bootstrap,
 } from "@/services/apiService"
 
 import type {
@@ -75,14 +76,7 @@ export const useProjectStore = create<ProjectStore>()(
       try {
         set({ isLoading: true, error: null })
   
-        const [projects, tasks, resources, teamMembers, resourceAssignments] = await Promise.all([
-          
-          projectService.getProjects(),
-          taskService.getTasks(),
-          resourceService.getResources(),
-          teamService.getTeam(),
-          assignmentService.getAssignments(),
-        ])
+        const {projects, tasks, resources, teamMembers, resourceAssignments} = await bootstrap()
         set({ projects, tasks, resources, teamMembers, resourceAssignments })
       } catch (err) {
         set({ error: err as Error })

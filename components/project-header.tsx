@@ -32,6 +32,7 @@ export function ProjectHeader({
   onGenerateReport,
   onToggleClosed,
 }: ProjectHeaderProps) {
+  console.log(teamMembers,project)
   const manager = teamMembers.find((member) => member.id === project.manager_id)
   const isClosed = project.status === "closed" // Check if project is closed
 

@@ -225,7 +225,7 @@ export default function ProjectManagementSystem() {
   };
 
   // --- Renderizado (sin cambios en el JSX) ---
-
+console.log(isLoading)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
