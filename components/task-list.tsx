@@ -14,7 +14,7 @@ interface TaskListProps {
   onFilterChange: (filter: "all" | "completed" | "in-progress") => void
   onAddTask: () => void
   onEditTask: (task: Task) => void
-  onDeleteTask: (taskId: number) => void
+  onDeleteTask: (taskId: string) => void
   isProjectClosed?: boolean // Added prop to disable actions when project is closed
 }
 

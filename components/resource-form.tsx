@@ -16,7 +16,7 @@ interface ResourceFormProps {
 export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) {
   const [formData, setFormData] = useState<Omit<Resource, "id">>({
     name: resource?.name || "",
-    type: resource?.type || "Humano",
+    type: resource?.type || "human",
     hourly_rate: resource?.hourly_rate || 0,
     availability_hours: resource?.availability_hours || 160,
   })
@@ -75,7 +75,7 @@ export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) 
         <select
           className="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground"
           value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value as "Humano" | "Material" })}
+          onChange={(e) => setFormData({ ...formData, type: e.target.value as "human" | "material" })}
         >
           <option value="Humano">Humano</option>
           <option value="Material">Material</option>

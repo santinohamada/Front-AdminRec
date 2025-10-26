@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Resource, ResourceAssignment, Task } from "@/lib/project-types"
-import { calculateResourceHoursLeft, formatCurrency, formatDate } from "@/lib/project-utils"
+import { formatCurrency, formatDate } from "@/lib/project-utils"
 import { motion } from "framer-motion"
 
 interface ResourceListProps {
@@ -13,10 +13,10 @@ interface ResourceListProps {
   assignments: ResourceAssignment[]
   tasks: Task[]
   onAssignResource: () => void
-  onRemoveAssignment: (assignmentId: number) => void
+  onRemoveAssignment: (assignmentId: string) => void
   onAddResource: () => void
   onEditResource: (resource: Resource) => void
-  onDeleteResource: (resourceId: number) => void
+  onDeleteResource: (resourceId: string) => void
   onUpdateAssignment: (assignment: ResourceAssignment) => void
 }
 
@@ -52,9 +52,9 @@ export function ResourceList({
         }}
       >
         {resources.map((resource) => {
-          const hoursLeft = calculateResourceHoursLeft(resource.id, resource, assignments)
-          const hoursUsed = resource.availability_hours - hoursLeft
-          const utilizationPercent = (hoursUsed / resource.availability_hours) * 100
+         
+      
+          const utilizationPercent = (resource.assigned_hours / resource.total_hours) * 100
 
           const resourceAssignments = assignments.filter((a) => a.resource_id === resource.id)
 
@@ -74,8 +74,8 @@ export function ResourceList({
                       </span>
                       <span>
                         Disponible:{" "}
-                        <span className={`font-medium ${hoursLeft <= 0 ? "text-red-500" : "text-foreground"}`}>
-                          {hoursLeft}h
+                        <span className={`font-medium ${resource.available_hours <= 0 ? "text-red-500" : "text-foreground"}`}>
+                          {resource.available_hours}h
                         </span>
                       </span>
                     </div>
@@ -99,7 +99,7 @@ export function ResourceList({
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Utilización</span>
                     <span className="text-foreground">
-                      {hoursUsed}h / {resource.availability_hours}h ({Math.round(utilizationPercent)}%)
+                      {resource.assigned_hours}h / {resource.total_hours}h ({Math.round(utilizationPercent)}%)
                     </span>
                   </div>
                   <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -131,7 +131,7 @@ export function ResourceList({
                             className="flex items-center justify-between text-sm bg-secondary/30 p-2 rounded"
                           >
                             <div className="flex-1">
-                              <div className="text-foreground font-medium">{task?.title}</div>
+                              <div className="text-foreground font-medium">{task?.name}</div>
                               <div className="text-xs text-muted-foreground mt-1">
                                 <span className="mr-3">
                                   📅 {formatDate(assignment.start_date)} - {formatDate(assignment.end_date)}

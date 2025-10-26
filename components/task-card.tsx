@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Task, Resource, ResourceAssignment } from "@/lib/project-types"
-import { formatCurrency, formatDate, getStatusInfo } from "@/lib/project-utils"
+import { formatCurrency, formatDate, getTaskStatusInfo } from "@/lib/project-utils"
 import { motion } from "framer-motion"
 
 interface TaskCardProps {
@@ -13,13 +13,13 @@ interface TaskCardProps {
   resources: Resource[]
   assignments: ResourceAssignment[]
   onEdit: (task: Task) => void
-  onDelete: (taskId: number) => void
+  onDelete: (taskId: string) => void
   isProjectClosed?: boolean // Added prop to disable actions when project is closed
 }
 
 export function TaskCard({ task, resources, assignments, onEdit, onDelete, isProjectClosed = false }: TaskCardProps) {
   const taskAssignments = assignments.filter((a) => a.task_id === task.id)
-  const statusInfo = getStatusInfo(task.status)
+  const statusInfo = getTaskStatusInfo(task.status)
 
   return (
     <motion.div
@@ -33,7 +33,7 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <h3 className="font-semibold text-foreground text-lg">{task.title}</h3>
+              <h3 className="font-semibold text-foreground text-lg">{task.name}</h3>
               <Badge variant="default" className={statusInfo.color}>
                 {task.status === "blocked" && <AlertCircleIcon className="h-3 w-3 mr-1" />}
                 {statusInfo.label}
@@ -61,11 +61,11 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex flex-col">
                 <span className="text-muted-foreground text-xs">Asignado a</span>
-                <span className="text-foreground font-medium">{task.assignee || "Sin asignar"}</span>
+                <span className="text-foreground font-medium">{task.assignee_id|| "Sin asignar"}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-muted-foreground text-xs">Fecha de Vencimiento</span>
-                <span className="text-foreground font-medium">{formatDate(task.due_date)}</span>
+                <span className="text-foreground font-medium">{formatDate(task.end_date)}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-muted-foreground text-xs">Horas</span>
@@ -83,7 +83,7 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
                   const resource = resources.find((r) => r.id === assignment.resource_id)
                   return (
                     <Badge key={assignment.id} variant="outline" className="text-xs">
-                      {resource?.name} ({assignment.hours_actual}/{assignment.hours_assigned}h)
+                      {resource?.name} ({assignment.hours_assigned}h)
                     </Badge>
                   )
                 })}

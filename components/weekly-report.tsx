@@ -117,7 +117,7 @@ export function WeeklyReport({ project, tasks, resources, assignments }: WeeklyR
           </div>
           <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+              className="h-full bg-linear-to-r from-blue-500 to-cyan-500"
               initial={{ width: 0 }}
               animate={{ width: `${avgProgress}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
@@ -179,7 +179,7 @@ export function WeeklyReport({ project, tasks, resources, assignments }: WeeklyR
                 <div key={idx} className="p-4 flex items-start gap-3">
                   <div className={`px-2 py-1 rounded text-xs font-medium ${statusInfo.color}`}>{statusInfo.label}</div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{activity.task!.title}</p>
+                    <p className="text-sm font-medium text-foreground">{activity.task!.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">{formatDate(activity.date)}</p>
                   </div>
                 </div>

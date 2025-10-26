@@ -73,7 +73,26 @@
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
 }
+/* Estilo base para el input en estado de error (ya lo maneja la clase destructiva, pero por si acaso) */
+.input-error-range {
+  border-color: var(--destructive); /* Usa la variable de color de Shadcn/ui */
+  box-shadow: 0 0 0 1px var(--destructive);
+  transition: all 0.2s ease-in-out;
+}
 
+/* Efecto de hover que quieres */
+.input-error-range:hover {
+  cursor: not-allowed; /* Opcional: Cambia el cursor */
+  /* Aquí puedes aplicar un efecto visual más fuerte */
+  box-shadow: 0 0 0 2px var(--destructive); 
+  background-color: var(--destructive-hover-bg, rgba(252, 165, 165, 0.1)); /* Un fondo suavemente rojo al pasar el mouse */
+}
+
+/* Si quieres que el texto dentro del input se vuelva rojo en hover (opcional) */
+.input-error-range:hover::placeholder,
+.input-error-range:hover {
+  color: var(--destructive); 
+}
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';

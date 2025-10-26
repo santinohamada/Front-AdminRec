@@ -1,49 +1,76 @@
+export type TaskStatus = "not_started" | "in_progress" | "completed" | "blocked";
+export type ProjectStatus = "active" | "paused" | "closed";
+export type ResourceType = "human" | "equipment" | "material";
+export type UUID = string; // Usaremos strings para los IDs
+
+export interface TeamMember {
+  id: UUID;
+  name: string;
+  dni: string;
+  phone: string;
+  email: string;
+  domicilio:string
+}
+
+// Resuelta la referencia circular: Manager tiene project_ids
+export interface Manager {
+  id: UUID;
+  name: string;
+  email: string;
+  project_ids: UUID[]; // <- ID en lugar de objeto
+}
+
 export interface Project {
-  id: number
-  name: string
-  description: string
-  start_date: string
-  end_date: string
-  total_budget: number
-  manager_id: number
-  status: "active" | "planning" | "on-hold" | "completed" | "closed" // Added "closed" status
+  id: UUID;
+  name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  total_budget: number;
+  manager_id: UUID; // <- ID en lugar de objeto
+  status: ProjectStatus;
 }
 
 export interface Task {
-  id: number
-  project_id: number
-  title: string
-  description: string
-  assignee: string
-  start_date: string
-  due_date: string
-  status: "not_started" | "in_progress" | "blocked" | "completed"
-  progress: number // 0-100
-  estimated_hours: number
-  budget_allocated: number
+  id: UUID;
+  project_id: UUID; // <- ID en lugar de objeto
+  name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  assignee_id: UUID; // <- ID en lugar de objeto (se busca en TeamMember)
+  priority: "low" | "medium" | "high";
+  status: TaskStatus;
+  completed: boolean;
+  progress: number;
+  budget_allocated: number;
+  estimated_hours: number;
 }
 
 export interface Resource {
-  id: number
-  name: string
-  type: "Humano" | "Material"
-  hourly_rate: number
-  availability_hours: number
+  id: UUID;
+  name: string;
+  type: ResourceType;
+  hourly_rate: number;
+  assigned_hours: number;
+  available_hours: number;
+  total_hours: number;
+  
 }
 
-export interface TeamMember {
-  id: number
-  name: string
-  role: string
-  email: string
-}
-
+// Entidad "Puente" normalizada. Solo IDs.
 export interface ResourceAssignment {
-  id: number
-  task_id: number
-  resource_id: number
-  hours_assigned: number
-  hours_actual: number
-  start_date: string // Added start and end dates for each resource assignment
-  end_date: string
+  id: UUID;
+  task_id: UUID; // <- ID en lugar de objeto
+  resource_id: UUID; // <- ID en lugar de objeto
+  hours_assigned: number;
+  start_date: string;
+  end_date: string;
 }
+
+// Tipos para los formularios (sin ID)
+// NewResourceAssignment ahora incluye los IDs
+export type NewProject = Omit<Project, "id">;
+export type NewTask = Omit<Task, "id">;
+export type NewResource = Omit<Resource, "id">;
+export type NewResourceAssignment = Omit<ResourceAssignment, "id">;

@@ -1,39 +1,72 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import type { Task, TeamMember, Resource, ResourceAssignment, Project } from "@/lib/project-types"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button"; // Assuming Button is available
+import { Input } from "./ui/input"; // Assuming Input is available
+import { motion } from "framer-motion";
+import { AlertTriangleIcon, PlusIcon, XIcon } from "lucide-react";
+
+// Importar los tipos normalizados
+import type {
+  Task,
+  TeamMember,
+  Resource,
+  ResourceAssignment,
+  Project,
+  UUID,
+  NewTask,
+  NewResourceAssignment,
+  TaskStatus,
+} from "../lib/project-types"; // Assuming relative path is correct
+
+// Asumiendo que esta función existe en las utilidades.
+// Si no la tienes, necesitarás añadirla a project-utils.ts
+const deriveStatusFromProgress = (
+  progress: number,
+  isBlocked: boolean
+): TaskStatus => {
+  if (isBlocked) return "blocked";
+  if (progress === 100) return "completed";
+  if (progress > 0) return "in_progress";
+  return "not_started";
+};
+
+// Importar las utilidades actualizadas
 import {
-  deriveStatusFromProgress,
   checkResourceConflicts,
   validateTaskProgress,
   validateTaskDatesInProjectRange,
   validateProjectBudget,
   validateResourceHours,
-} from "@/lib/project-utils"
-import { motion } from "framer-motion"
-import { AlertTriangleIcon, PlusIcon, XIcon } from "lucide-react"
+} from "../lib/project-utils"; // Asegúrate de que este path sea correcto
 
 interface TaskFormProps {
-  task?: Task
-  projectId: number
-  project: Project
-  teamMembers: TeamMember[]
-  resources: Resource[]
-  assignments: ResourceAssignment[]
-  tasks: Task[]
-  onSave: (task: Omit<Task, "id"> | Task, resourceAssignments?: Omit<ResourceAssignment, "id" | "task_id">[]) => void
-  onCancel: () => void
+  task?: Task;
+  projectId: UUID;
+  project: Project;
+  teamMembers: TeamMember[];
+  resources: Resource[];
+  assignments: ResourceAssignment[];
+  tasks: Task[];
+  onSave: (
+    task: Omit<Task, "id"> | Task,
+    resourceAssignments?: Omit<NewResourceAssignment, "task_id">[]
+  ) => void;
+  onCancel: () => void;
 }
 
+// Este tipo interno ahora coincide con lo que el formulario necesita
+// para crear un NewResourceAssignment
 interface ResourceAssignmentForm {
-  resource_id: number
-  hours_assigned: number
-  start_date: string
-  end_date: string
+  resource_id: UUID;
+  hours_assigned: number;
+  start_date: string;
+  end_date: string;
 }
+
+// Un tipo interno para el estado del formulario, basado en NewTask
+type TaskFormData = Omit<NewTask, "status" | "completed">;
 
 export function TaskForm({
   task,
@@ -46,212 +79,322 @@ export function TaskForm({
   onSave,
   onCancel,
 }: TaskFormProps) {
-  const [formData, setFormData] = useState<Omit<Task, "id">>({
+  const defaultAssigneeId =
+    task?.assignee_id || (teamMembers.length > 0 ? teamMembers[0].id : ""); // Usar "" como default
+
+  const [formData, setFormData] = useState<TaskFormData>({
     project_id: task?.project_id || projectId,
-    title: task?.title || "",
+    name: task?.name || "",
     description: task?.description || "",
-    assignee: task?.assignee || "",
+    assignee_id: defaultAssigneeId,
     start_date: task?.start_date || "",
-    due_date: task?.due_date || "",
-    status: task?.status || "not_started",
+    end_date: task?.end_date || "",
+    priority: task?.priority || "medium",
     progress: task?.progress || 0,
     estimated_hours: task?.estimated_hours || 0,
     budget_allocated: task?.budget_allocated || 0,
-  })
+  });
 
-  const [isBlocked, setIsBlocked] = useState(task?.status === "blocked")
+  const [isBlocked, setIsBlocked] = useState(task?.status === "blocked");
+  const [criticalError, setCriticalError] = useState<string | null>(null);
   const [resourceConflicts, setResourceConflicts] = useState<
     { resourceName: string; conflictingTasks: string[]; dates: string }[]
-  >([])
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([])
+  >([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
-  const [selectedResources, setSelectedResources] = useState<ResourceAssignmentForm[]>([])
+  const [selectedResources, setSelectedResources] = useState<
+    ResourceAssignmentForm[]
+  >([]);
 
+  // Inicializar asignaciones de recursos
   useEffect(() => {
     if (task) {
-      const taskAssignments = assignments.filter((a) => a.task_id === task.id)
+      const taskAssignments = assignments.filter((a) => a.task_id === task.id);
       setSelectedResources(
         taskAssignments.map((a) => ({
           resource_id: a.resource_id,
           hours_assigned: a.hours_assigned,
           start_date: a.start_date,
           end_date: a.end_date,
-        })),
-      )
+        }))
+      );
     }
-  }, [task, assignments])
+  }, [task, assignments]);
 
+  // Sincronizar fechas de asignación con las fechas de la tarea
   useEffect(() => {
-    const conflicts: { resourceName: string; conflictingTasks: string[]; dates: string }[] = []
-    const warnings: string[] = []
+    setSelectedResources((prev) =>
+      prev.map((res) => {
+        let newStart = res.start_date;
+        let newEnd = res.end_date;
+
+        // Ajustar fecha inicio si es antes del inicio de la tarea
+        if (newStart && formData.start_date && newStart < formData.start_date) {
+          newStart = formData.start_date;
+        }
+
+        // Ajustar fecha fin si es después del fin de la tarea
+        if (newEnd && formData.end_date && newEnd > formData.end_date) {
+          newEnd = formData.end_date;
+        }
+
+        // Si start > end después de ajustes, resetear end
+        if (newStart && newEnd && newStart > newEnd) {
+          newEnd = newStart; // Resetear al inicio de la asignación
+        }
+
+        return { ...res, start_date: newStart, end_date: newEnd };
+      })
+    );
+  }, [formData.start_date, formData.end_date]);
+
+  // Validaciones y conflictos en tiempo real
+  useEffect(() => {
+    // Reiniciar errores críticos al cambiar recursos/datos
+    setCriticalError(null);
+
+    const conflicts: {
+      resourceName: string;
+      conflictingTasks: string[];
+      dates: string;
+    }[] = [];
+    const warnings: string[] = [];
 
     for (const selected of selectedResources) {
-      if (!selected.start_date || !selected.end_date || selected.resource_id === 0) continue
+      if (
+        !selected.start_date ||
+        !selected.end_date ||
+        selected.resource_id === ""
+      )
+        continue;
 
-      const resource = resources.find((r) => r.id === selected.resource_id)
-      if (!resource) continue
+      const resource = resources.find((r) => r.id === selected.resource_id);
+      if (!resource) continue;
 
+      // 1. Conflicto de Fechas
       const { hasConflict, conflictingAssignments } = checkResourceConflicts(
         selected.resource_id,
         selected.start_date,
         selected.end_date,
         task?.id,
-        assignments,
-      )
+        assignments
+      );
 
       if (hasConflict) {
         const conflictingTaskNames = conflictingAssignments
           .map((a) => {
-            const conflictTask = tasks.find((t) => t.id === a.task_id)
-            return conflictTask ? `${conflictTask.title} (${a.start_date} - ${a.end_date})` : ""
+            const conflictTask = tasks.find((t) => t.id === a.task_id);
+            return conflictTask
+              ? `${conflictTask.name} (${a.start_date} - ${a.end_date})`
+              : "";
           })
-          .filter(Boolean)
+          .filter(Boolean);
 
         conflicts.push({
           resourceName: resource.name,
           conflictingTasks: conflictingTaskNames,
           dates: `${selected.start_date} - ${selected.end_date}`,
-        })
+        });
       }
 
+      // 2. Conflicto de Horas Disponibles
       const hoursValidation = validateResourceHours(
         selected.resource_id,
         resource,
         assignments,
         selected.hours_assigned,
-        undefined,
-      )
+        undefined // Asumimos que esta validación es para nuevas asignaciones
+      );
 
       if (!hoursValidation.valid) {
-        warnings.push(`${resource.name}: ${hoursValidation.error}`)
+        warnings.push(`${resource.name}: ${hoursValidation.error}`);
       }
     }
 
-    setResourceConflicts(conflicts)
-    setValidationWarnings(warnings)
-  }, [selectedResources, task, assignments, resources, tasks])
+    setResourceConflicts(conflicts);
+    setValidationWarnings(warnings);
+  }, [selectedResources, task, assignments, resources, tasks]);
 
   const handleAddResource = () => {
     setSelectedResources([
       ...selectedResources,
       {
-        resource_id: 0,
+        resource_id: "",
         hours_assigned: 0,
         start_date: formData.start_date || "",
-        end_date: formData.due_date || "",
+        end_date: formData.end_date || "",
       },
-    ])
-  }
+    ]);
+  };
 
   const handleRemoveResource = (index: number) => {
-    setSelectedResources(selectedResources.filter((_, i) => i !== index))
-  }
+    setSelectedResources(selectedResources.filter((_, i) => i !== index));
+  };
 
   const handleResourceChange = (
     index: number,
-    field: "resource_id" | "hours_assigned" | "start_date" | "end_date",
-    value: number | string,
+    // Eliminado 'hours_actual' por no existir en el nuevo esquema
+    field:
+      | "resource_id"
+      | "hours_assigned"
+      | "start_date"
+      | "end_date",
+    value: string | number
   ) => {
-    const updated = [...selectedResources]
-    updated[index] = { ...updated[index], [field]: value }
-    setSelectedResources(updated)
-  }
+    const updated = [...selectedResources];
+    updated[index] = { ...updated[index], [field]: value };
+    setSelectedResources(updated);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    setCriticalError(null); // Limpiar errores antes de la validación
+
+    // --- VALIDACIONES DE ENVÍO ---
 
     if (project.status === "closed") {
-      alert("No se pueden modificar tareas en un proyecto cerrado")
-      return
+      setCriticalError("No se pueden modificar tareas en un proyecto cerrado.");
+      return;
     }
 
-    if (!formData.title.trim()) {
-      alert("El título de la tarea es requerido")
-      return
+    if (!formData.name.trim()) {
+      setCriticalError("El título de la tarea es requerido.");
+      return;
     }
 
-    if (!formData.start_date || !formData.due_date) {
-      alert("Las fechas de inicio y fin son requeridas")
-      return
+    if (!formData.start_date || !formData.end_date) {
+      setCriticalError("Las fechas de inicio y fin son requeridas.");
+      return;
     }
 
-    if (new Date(formData.start_date) > new Date(formData.due_date)) {
-      alert("La fecha de inicio debe ser anterior a la fecha de fin")
-      return
+    if (new Date(formData.start_date) > new Date(formData.end_date)) {
+      setCriticalError(
+        "La fecha de inicio debe ser anterior o igual a la fecha de fin."
+      );
+      return;
     }
 
-    const progressValidation = validateTaskProgress(formData.progress)
+    const progressValidation = validateTaskProgress(formData.progress);
     if (!progressValidation.valid) {
-      alert(progressValidation.error)
-      return
+      setCriticalError(progressValidation.error!);
+      return;
     }
 
     const datesValidation = validateTaskDatesInProjectRange(
       formData.start_date,
-      formData.due_date,
+      formData.end_date,
       project.start_date,
-      project.end_date,
-    )
+      project.end_date
+    );
     if (!datesValidation.valid) {
-      alert(datesValidation.error)
-      return
+      setCriticalError(datesValidation.error!);
+      return;
     }
 
     const budgetValidation = validateProjectBudget(
       project.total_budget,
       tasks.filter((t) => t.project_id === projectId),
       task?.id,
-      formData.budget_allocated,
-    )
+      formData.budget_allocated
+    );
     if (!budgetValidation.valid) {
-      alert(budgetValidation.error)
-      return
+      setCriticalError(budgetValidation.error!);
+      return;
+    }
+
+    // 1. Validar asignaciones de recursos (fechas y campos requeridos)
+    if (
+      !formData.assignee_id ||
+      !teamMembers.some((m) => m.id === formData.assignee_id)
+    ) {
+      setCriticalError("Debe seleccionar un miembro del equipo válido.");
+      return;
     }
 
     for (const resource of selectedResources) {
-      if (resource.resource_id > 0 && resource.hours_assigned > 0) {
-        if (!resource.start_date || !resource.end_date) {
-          alert("Todas las asignaciones de recursos deben tener fechas de inicio y fin")
-          return
-        }
-        if (new Date(resource.start_date) > new Date(resource.end_date)) {
-          alert("La fecha de inicio de la asignación debe ser anterior a la fecha de fin")
-          return
-        }
-
-        if (
-          new Date(resource.start_date) < new Date(formData.start_date) ||
-          new Date(resource.end_date) > new Date(formData.due_date)
-        ) {
-          alert("Las fechas de asignación de recursos deben estar dentro de las fechas de la tarea")
-          return
-        }
+      if (
+        (resource.resource_id !== "" || resource.hours_assigned > 0) &&
+        (!resource.start_date || !resource.end_date)
+      ) {
+        setCriticalError(
+          "Todas las asignaciones de recursos deben tener fechas de inicio y fin válidas."
+        );
+        return;
+      }
+      if (
+        resource.start_date &&
+        resource.end_date &&
+        new Date(resource.start_date) > new Date(resource.end_date)
+      ) {
+        setCriticalError(
+          "La fecha de inicio de la asignación debe ser anterior a la fecha de fin."
+        );
+        return;
+      }
+      if (
+        (resource.start_date &&
+          new Date(resource.start_date) < new Date(formData.start_date)) ||
+        (resource.end_date &&
+          new Date(resource.end_date) > new Date(formData.end_date))
+      ) {
+        setCriticalError(
+          "Las fechas de asignación de recursos deben estar dentro de las fechas de la tarea."
+        );
+        return;
       }
     }
 
-    const validResources = selectedResources.filter(
-      (r) => r.resource_id > 0 && r.hours_assigned > 0 && r.start_date && r.end_date,
-    )
+    // --- LÓGICA DE GUARDADO ACTUALIZADA (NORMALIZADA) ---
 
-    const derivedStatus = deriveStatusFromProgress(formData.progress, isBlocked)
-    const taskData = { ...formData, status: derivedStatus }
+    // 2. Calcular estado y completado
+    const derivedStatus = deriveStatusFromProgress(
+      formData.progress,
+      isBlocked
+    );
+    const isCompleted = formData.progress === 100;
+
+    // 3. Crear el objeto de datos final (tipo NewTask)
+    const finalTaskData: NewTask = {
+      ...formData,
+      status: derivedStatus,
+      completed: isCompleted,
+    };
+
+    // 4. Crear las asignaciones válidas (tipo Omit<NewResourceAssignment, "task_id">)
+    const validResources: Omit<NewResourceAssignment, "task_id">[] =
+      selectedResources
+        .filter(
+          (r) =>
+            r.resource_id !== "" &&
+            r.hours_assigned > 0 &&
+            r.start_date &&
+            r.end_date
+        )
+        .map((r) => ({
+          resource_id: r.resource_id,
+          hours_assigned: r.hours_assigned,
+          start_date: r.start_date,
+          end_date: r.end_date,
+        }));
 
     if (task) {
-      onSave({ ...taskData, id: task.id }, validResources)
+      // Enviar la Tarea completa (con ID) y las asignaciones
+      onSave({ ...finalTaskData, id: task.id }, validResources);
     } else {
-      onSave(taskData, validResources)
+      // Enviar la Nueva Tarea (sin ID) y las asignaciones
+      onSave(finalTaskData, validResources);
     }
-  }
+  };
 
-  const derivedStatus = deriveStatusFromProgress(formData.progress, isBlocked)
+  const derivedStatus = deriveStatusFromProgress(formData.progress, isBlocked);
   const statusLabels = {
     not_started: "Sin Iniciar",
     in_progress: "En Progreso",
     blocked: "Bloqueada",
     completed: "Completada",
-  }
+  };
 
-  const isDisabled = project.status === "closed"
+  const isDisabled = project.status === "closed";
 
   return (
     <motion.form
@@ -267,6 +410,7 @@ export function TaskForm({
         },
       }}
     >
+      {/* Alerta de Proyecto Cerrado */}
       {isDisabled && (
         <motion.div
           className="bg-red-500/10 border border-red-500/20 rounded-lg p-4"
@@ -274,120 +418,169 @@ export function TaskForm({
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex items-start gap-3">
-            <AlertTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangleIcon className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="font-semibold text-red-600">Proyecto Cerrado</h4>
               <p className="text-sm text-red-700 mt-1">
-                Este proyecto está cerrado y no se pueden realizar modificaciones.
+                Este proyecto está cerrado y no se pueden realizar
+                modificaciones.
               </p>
             </div>
           </div>
         </motion.div>
       )}
 
+      {/* Alerta de Errores Críticos de Validación (Sustituye a alerts) */}
+      {criticalError && (
+        <motion.div
+          className="bg-red-500/10 border border-red-500/20 rounded-lg p-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangleIcon className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-600">Error de Validación</h4>
+              <p className="text-sm text-red-700 mt-1">{criticalError}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Alerta de Conflictos de Recursos */}
       {resourceConflicts.length > 0 && (
         <motion.div
           className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-start gap-3">
-            <AlertTriangleIcon className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-yellow-600 mb-2">Advertencia: Recursos Sobreasignados</h4>
-              {resourceConflicts.map((conflict, idx) => (
-                <div key={idx} className="text-sm text-yellow-700 mb-2">
-                  <p className="font-medium">
-                    {conflict.resourceName} ({conflict.dates})
-                  </p>
-                  <p className="text-xs">Ya está asignado a:</p>
-                  <ul className="text-xs ml-4 list-disc">
-                    {conflict.conflictingTasks.map((task, i) => (
-                      <li key={i}>{task}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-              <p className="text-xs text-yellow-600 mt-2">
-                Puedes continuar con el registro, pero considera reasignar recursos o ajustar las fechas.
-              </p>
-            </div>
-          </div>
+          <h4 className="font-semibold text-yellow-600 mb-2">
+            Conflictos de Recursos Detectados
+          </h4>
+          <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+            {resourceConflicts.map((conflict, i) => (
+              <li key={i}>
+                **{conflict.resourceName}** asignado de {conflict.dates}. Conflictos: {conflict.conflictingTasks.join(", ")}
+              </li>
+            ))}
+          </ul>
         </motion.div>
       )}
 
+      {/* Alerta de Advertencias de Horas (Límite Excedido) */}
       {validationWarnings.length > 0 && (
         <motion.div
           className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-start gap-3">
-            <AlertTriangleIcon className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-orange-600 mb-2">Advertencia: Límite de Horas Excedido</h4>
-              {validationWarnings.map((warning, idx) => (
-                <p key={idx} className="text-sm text-orange-700 mb-1">
-                  {warning}
-                </p>
-              ))}
-            </div>
-          </div>
+          <h4 className="font-semibold text-orange-600 mb-2">
+            Advertencias de Horas
+          </h4>
+          <ul className="list-disc list-inside text-sm text-orange-700 space-y-1">
+            {validationWarnings.map((warning, i) => (
+              <li key={i}>{warning}</li>
+            ))}
+          </ul>
         </motion.div>
       )}
 
-      <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
-        <label className="block text-sm font-medium text-foreground mb-2">Título *</label>
+      {/* Título y Descripción */}
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
+      >
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Título *
+        </label>
         <Input
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           placeholder="Título de la tarea"
           required
           disabled={isDisabled}
         />
       </motion.div>
 
-      <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
-        <label className="block text-sm font-medium text-foreground mb-2">Descripción</label>
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
+      >
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Descripción
+        </label>
         <textarea
-          className="w-full min-h-[80px] px-3 py-2 bg-background border border-input rounded-md text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full min-h-20 px-3 py-2 bg-background border border-input rounded-md text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
           placeholder="Descripción de la tarea"
           disabled={isDisabled}
         />
       </motion.div>
 
-      <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
-        <label className="block text-sm font-medium text-foreground mb-2">Asignado a</label>
+      {/* Asignado a (Team Member) */}
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
+      >
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Asignado a
+        </label>
         <select
           className="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-          value={formData.assignee}
-          onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
+          value={formData.assignee_id}
+          onChange={(e) =>
+            setFormData({ ...formData, assignee_id: e.target.value as UUID })
+          }
           disabled={isDisabled}
         >
-          <option value="">Sin asignar</option>
+          {teamMembers.length === 0 && (
+            <option value="">No hay miembros de equipo</option>
+          )}
           {teamMembers.map((member) => (
-            <option key={member.id} value={member.name}>
+            <option key={member.id} value={member.id}>
               {member.name}
             </option>
           ))}
         </select>
       </motion.div>
 
-      <motion.div className="space-y-3" variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
+      {/* Progreso y Estado */}
+      <motion.div
+        className="space-y-3"
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
+      >
+        {/* Input Progreso */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Progreso (%) *</label>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Progreso (%) *
+          </label>
           <Input
             type="number"
             min="0"
             max="100"
             value={formData.progress}
-            onChange={(e) => setFormData({ ...formData, progress: Math.min(100, Math.max(0, Number(e.target.value))) })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                progress: Math.min(100, Math.max(0, Number(e.target.value))),
+              })
+            }
             disabled={isDisabled}
           />
         </div>
-
+        {/* Checkbox Bloqueado */}
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -395,80 +588,133 @@ export function TaskForm({
             checked={isBlocked}
             onChange={(e) => setIsBlocked(e.target.checked)}
             className="w-4 h-4 rounded border-input bg-background disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isDisabled}
+            disabled={isDisabled || formData.progress === 100} // No se puede bloquear si está completa
           />
-          <label htmlFor="blocked" className="text-sm text-foreground cursor-pointer">
+          <label
+            htmlFor="blocked"
+            className={`text-sm text-foreground cursor-pointer ${
+              formData.progress === 100 ? "opacity-50" : ""
+            }`}
+          >
             Marcar como bloqueada
           </label>
         </div>
-
+        {/* Label Estado Derivado */}
         <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md border border-border">
           <span className="font-medium">Estado derivado:</span>{" "}
           <span className="text-foreground">{statusLabels[derivedStatus]}</span>
-          <p className="text-xs mt-1">
-            El estado se calcula automáticamente según el progreso (0% = Sin Iniciar, 1-99% = En Progreso, 100% =
-            Completada)
-          </p>
         </div>
       </motion.div>
 
+      {/* Fechas de la Tarea */}
       <motion.div
         className="grid grid-cols-2 gap-4"
-        variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
       >
+        {/* Input Fecha Inicio */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Fecha de Inicio *</label>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Fecha de Inicio *
+          </label>
           <Input
             type="date"
+            min={project.start_date}
+            max={project.end_date}
             value={formData.start_date}
-            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                start_date: e.target.value,
+                end_date:
+                  e.target.value > formData.end_date
+                    ? e.target.value // Si inicio > fin, forzar fin = inicio
+                    : formData.end_date,
+              });
+            }}
             required
             disabled={isDisabled}
           />
         </div>
-
+        {/* Input Fecha Vencimiento */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Fecha de Vencimiento *</label>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Fecha de Vencimiento *
+          </label>
           <Input
+            min={formData.start_date ? formData.start_date : project.start_date}
+            max={project.end_date}
             type="date"
-            value={formData.due_date}
-            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+            value={formData.end_date}
+            onChange={(e) =>
+              setFormData({ ...formData, end_date: e.target.value })
+            }
             required
             disabled={isDisabled}
           />
         </div>
       </motion.div>
 
+      {/* Horas y Presupuesto */}
       <motion.div
         className="grid grid-cols-2 gap-4"
-        variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
       >
+        {/* Input Horas Estimadas */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Horas Estimadas</label>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Horas Estimadas
+          </label>
           <Input
             type="number"
             min="0"
             value={formData.estimated_hours}
-            onChange={(e) => setFormData({ ...formData, estimated_hours: Number(e.target.value) })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                estimated_hours: Number(e.target.value),
+              })
+            }
             disabled={isDisabled}
           />
         </div>
-
+        {/* Input Presupuesto Asignado */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Presupuesto Asignado</label>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Presupuesto Asignado
+          </label>
           <Input
             type="number"
             min="0"
             value={formData.budget_allocated}
-            onChange={(e) => setFormData({ ...formData, budget_allocated: Number(e.target.value) })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                budget_allocated: Number(e.target.value),
+              })
+            }
             disabled={isDisabled}
           />
         </div>
       </motion.div>
 
-      <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }} className="space-y-3">
+      {/* Asignar Recursos */}
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, x: -20 },
+          visible: { opacity: 1, x: 0 },
+        }}
+        className="space-y-3"
+      >
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-foreground">Asignar Recursos</label>
+          <label className="block text-sm font-medium text-foreground">
+            Asignar Recursos
+          </label>
           <Button
             type="button"
             size="sm"
@@ -485,16 +731,26 @@ export function TaskForm({
         {selectedResources.length > 0 && (
           <div className="space-y-3 border border-border rounded-lg p-3 bg-muted/30">
             {selectedResources.map((selected, index) => (
-              <div key={index} className="space-y-2 p-3 bg-background rounded-md border border-border">
+              <div
+                key={index}
+                className="space-y-2 p-3 bg-background rounded-md border border-border"
+              >
                 <div className="flex gap-2 items-start">
                   <div className="flex-1">
+                    {/* Select de Recurso (UUID/string) */}
                     <select
                       className="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       value={selected.resource_id}
-                      onChange={(e) => handleResourceChange(index, "resource_id", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleResourceChange(
+                          index,
+                          "resource_id",
+                          e.target.value as UUID
+                        )
+                      }
                       disabled={isDisabled}
                     >
-                      <option value={0}>Seleccionar recurso...</option>
+                      <option value="">Seleccionar recurso...</option>
                       {resources.map((resource) => (
                         <option key={resource.id} value={resource.id}>
                           {resource.name} ({resource.type})
@@ -506,9 +762,20 @@ export function TaskForm({
                     <Input
                       type="number"
                       min="0"
+                      // *** CAMBIO: Usar available_hours en lugar de availability_hours ***
+                      max={
+                        resources.find((r) => r.id === selected.resource_id)
+                          ?.available_hours ?? 0
+                      }
                       placeholder="Horas"
                       value={selected.hours_assigned || ""}
-                      onChange={(e) => handleResourceChange(index, "hours_assigned", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleResourceChange(
+                          index,
+                          "hours_assigned",
+                          Number(e.target.value)
+                        )
+                      }
                       className="text-sm"
                       disabled={isDisabled}
                     />
@@ -525,22 +792,49 @@ export function TaskForm({
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
+                  {/* Fecha Inicio Asignación */}
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Fecha Inicio</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      Fecha Inicio
+                    </label>
                     <Input
                       type="date"
                       value={selected.start_date}
-                      onChange={(e) => handleResourceChange(index, "start_date", e.target.value)}
+                      onChange={(e) => {
+                        handleResourceChange(
+                          index,
+                          "start_date",
+                          e.target.value
+                        );
+                      }}
+                      min={formData.start_date || project.start_date} // nunca antes que inicio de tarea
+                      max={
+                        selected.end_date ||
+                        formData.end_date ||
+                        project.end_date
+                      } // no puede superar fin asignación/tarea/proyecto
                       className="text-sm"
                       disabled={isDisabled}
                     />
                   </div>
+
+                  {/* Fecha Fin Asignación */}
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Fecha Fin</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      Fecha Fin
+                    </label>
                     <Input
                       type="date"
                       value={selected.end_date}
-                      onChange={(e) => handleResourceChange(index, "end_date", e.target.value)}
+                      onChange={(e) => {
+                        handleResourceChange(index, "end_date", e.target.value);
+                      }}
+                      min={
+                        selected.start_date ||
+                        formData.start_date ||
+                        project.start_date
+                      } // nunca antes que inicio asignación/tarea/proyecto
+                      max={formData.end_date || project.end_date} // nunca después que fin tarea/proyecto
                       className="text-sm"
                       disabled={isDisabled}
                     />
@@ -553,22 +847,32 @@ export function TaskForm({
 
         {selectedResources.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            No hay recursos asignados. Haz clic en "Agregar Recurso" para asignar recursos a esta tarea.
+            No hay recursos asignados. Haz clic en "Agregar Recurso" para
+            asignar recursos a esta tarea.
           </p>
         )}
       </motion.div>
 
+      {/* Botones de Guardar/Cancelar */}
       <motion.div
         className="flex gap-3 pt-4"
-        variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+        variants={{
+          hidden: { opacity: 0, y: 20 },
+          visible: { opacity: 1, y: 0 },
+        }}
       >
         <Button type="submit" className="flex-1" disabled={isDisabled}>
           {task ? "Actualizar Tarea" : "Crear Tarea"}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="flex-1 bg-transparent"
+        >
           Cancelar
         </Button>
       </motion.div>
     </motion.form>
-  )
+  );
 }

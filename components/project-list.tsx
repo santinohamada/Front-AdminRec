@@ -9,8 +9,8 @@ import { motion } from "framer-motion"
 interface ProjectListProps {
   projects: Project[]
   tasks: Task[]
-  selectedProjectId: number
-  onSelectProject: (projectId: number) => void
+  selectedProjectId: string
+  onSelectProject: (projectId: string) => void
   onAddProject: () => void
 }
 
@@ -38,7 +38,7 @@ export function ProjectList({ projects, tasks, selectedProjectId, onSelectProjec
         >
           {projects.map((project) => {
             const projectTasks = tasks.filter((t) => t.project_id === project.id)
-            const completedTasks = projectTasks.filter((t) => t.completed).length
+            const completedTasks = projectTasks.filter((t) => t.status === "completed").length
             const progress = calculateProjectProgress(projectTasks)
 
             return (
@@ -59,7 +59,7 @@ export function ProjectList({ projects, tasks, selectedProjectId, onSelectProjec
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
               >
                 <div className="flex items-start gap-2 md:gap-3">
-                  <FolderIcon className="h-4 md:h-5 w-4 md:w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <FolderIcon className="h-4 md:h-5 w-4 md:w-5 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm md:text-base text-foreground truncate">{project.name}</h3>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{project.description}</p>

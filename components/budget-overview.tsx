@@ -20,7 +20,7 @@ export function BudgetOverview({ project, tasks, resources, assignments }: Budge
   const actualCost = assignments.reduce((sum, assignment) => {
     const resource = resources.find((r) => r.id === assignment.resource_id)
     if (!resource) return sum
-    return sum + assignment.hours_actual * resource.hourly_rate
+    return sum +  resource.hourly_rate
   }, 0)
 
   const plannedCost = assignments.reduce((sum, assignment) => {
@@ -66,7 +66,7 @@ export function BudgetOverview({ project, tasks, resources, assignments }: Budge
           <Card className="p-6">
             <div className="text-sm text-muted-foreground mb-1">Costo Real</div>
             <div className="text-2xl md:text-3xl font-bold text-foreground">{formatCurrency(actualCost)}</div>
-            <div className="text-xs text-muted-foreground mt-1">Planificado: {formatCurrency(plannedCost)}</div>
+          
           </Card>
         </motion.div>
 
@@ -135,13 +135,13 @@ export function BudgetOverview({ project, tasks, resources, assignments }: Budge
             const taskActualCost = taskAssignments.reduce((sum, assignment) => {
               const resource = resources.find((r) => r.id === assignment.resource_id)
               if (!resource) return sum
-              return sum + assignment.hours_actual * resource.hourly_rate
+              return sum +  resource.hourly_rate
             }, 0)
 
             return (
               <div key={task.id}>
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-foreground font-medium">{task.title}</span>
+                  <span className="text-foreground font-medium">{task.name}</span>
                   <div className="text-right">
                     <div className="text-muted-foreground">
                       {formatCurrency(task.budget_allocated)} ({formatPercentage(percentage)})

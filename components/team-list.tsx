@@ -16,7 +16,7 @@ export function TeamList({ teamMembers, tasks }: TeamListProps) {
 
       <div className="grid gap-4">
         {teamMembers.map((member) => {
-          const memberTasks = tasks.filter((t) => t.assignee === member.name)
+          const memberTasks = tasks.filter((t) => t.assignee_id === member.id)
           const completedTasks = memberTasks.filter((t) => t.completed).length
 
           return (
@@ -45,7 +45,7 @@ export function TeamList({ teamMembers, tasks }: TeamListProps) {
                               <div
                                 className={`h-2 w-2 rounded-full ${task.completed ? "bg-green-500" : "bg-yellow-500"}`}
                               />
-                              {task.title}
+                              {task.name}
                             </div>
                           ))}
                         </div>
