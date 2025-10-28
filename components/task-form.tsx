@@ -430,61 +430,6 @@ export function TaskForm({
         </motion.div>
       )}
 
-      {/* Alerta de Errores Críticos de Validación (Sustituye a alerts) */}
-      {criticalError && (
-        <motion.div
-          className="bg-red-500/10 border border-red-500/20 rounded-lg p-4"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-start gap-3">
-            <AlertTriangleIcon className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-red-600">Error de Validación</h4>
-              <p className="text-sm text-red-700 mt-1">{criticalError}</p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Alerta de Conflictos de Recursos */}
-      {resourceConflicts.length > 0 && (
-        <motion.div
-          className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h4 className="font-semibold text-yellow-600 mb-2">
-            Conflictos de Recursos Detectados
-          </h4>
-          <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-            {resourceConflicts.map((conflict, i) => (
-              <li key={i}>
-                **{conflict.resourceName}** asignado de {conflict.dates}. Conflictos: {conflict.conflictingTasks.join(", ")}
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
-
-      {/* Alerta de Advertencias de Horas (Límite Excedido) */}
-      {validationWarnings.length > 0 && (
-        <motion.div
-          className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h4 className="font-semibold text-orange-600 mb-2">
-            Advertencias de Horas
-          </h4>
-          <ul className="list-disc list-inside text-sm text-orange-700 space-y-1">
-            {validationWarnings.map((warning, i) => (
-              <li key={i}>{warning}</li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
-
       {/* Título y Descripción */}
       <motion.div
         variants={{
@@ -691,12 +636,19 @@ export function TaskForm({
           <Input
             type="number"
             min="0"
+            max={project.total_budget}
             value={formData.budget_allocated}
-            onChange={(e) =>
+            onChange={(e) =>{
+              setCriticalError(null)
               setFormData({
                 ...formData,
-                budget_allocated: Number(e.target.value),
+                budget_allocated: Number(e.target.value) 
+                 
               })
+            if(Number(e.target.value) > project.total_budget){
+              setCriticalError("El presupuesto asignado de la tarea no puede ser mayor al presupuesto disponible del proyecto")
+            }
+            }
             }
             disabled={isDisabled}
           />
@@ -762,11 +714,7 @@ export function TaskForm({
                     <Input
                       type="number"
                       min="0"
-                      // *** CAMBIO: Usar available_hours en lugar de availability_hours ***
-                      max={
-                        resources.find((r) => r.id === selected.resource_id)
-                          ?.available_hours ?? 0
-                      }
+                     
                       placeholder="Horas"
                       value={selected.hours_assigned || ""}
                       onChange={(e) =>
@@ -852,7 +800,62 @@ export function TaskForm({
           </p>
         )}
       </motion.div>
+   {/* Alerta de Advertencias de Horas (Límite Excedido) */}
+      {validationWarnings.length > 0 && (
+        <motion.div
+          className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h4 className="font-semibold text-orange-600 mb-2">
+            Advertencia de Horas (Límite Excedido)
+          </h4>
+          <ul className="list-disc list-inside text-sm text-orange-700 space-y-1">
+            {validationWarnings.map((warning, i) => (
+              <li key={i}>{warning}</li>
+            ))}
+          </ul>
+        </motion.div>
+      )}
+    
+      {/* Alerta de Errores Críticos de Validación (Sustituye a alerts) */}
+      {criticalError && (
+        <motion.div
+          className="bg-red-500/10 border border-red-500/20 rounded-lg p-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangleIcon className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-600">Error de Validación</h4>
+              <p className="text-sm text-red-700 mt-1">{criticalError}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
+      {/* Alerta de Conflictos de Recursos */}
+      {resourceConflicts.length > 0 && (
+        <motion.div
+          className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h4 className="font-semibold text-yellow-600 mb-2">
+            Conflictos de Recursos Detectados
+          </h4>
+          <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+            {resourceConflicts.map((conflict, i) => (
+              <li key={i}>
+                <strong>{conflict.resourceName}</strong> asignado de {conflict.dates}. Conflictos: {conflict.conflictingTasks.join(", ")}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      )}
+
+   
       {/* Botones de Guardar/Cancelar */}
       <motion.div
         className="flex gap-3 pt-4"
@@ -861,7 +864,7 @@ export function TaskForm({
           visible: { opacity: 1, y: 0 },
         }}
       >
-        <Button type="submit" className="flex-1" disabled={isDisabled}>
+        <Button type="submit" className="flex-1" disabled={isDisabled || criticalError !==null}>
           {task ? "Actualizar Tarea" : "Crear Tarea"}
         </Button>
         <Button

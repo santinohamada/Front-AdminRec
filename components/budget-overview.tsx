@@ -126,10 +126,10 @@ export function BudgetOverview({ project, tasks, resources, assignments }: Budge
       )}
 
       <Card className="p-6">
-        <h4 className="font-semibold text-foreground mb-4">Presupuesto por Tarea</h4>
+        <h4 className="font-semibold text-foreground">Presupuesto por Tarea</h4>
         <div className="space-y-3">
           {tasks.map((task) => {
-            const percentage = (task.budget_allocated / project.total_budget) * 100
+            const percentage = (task.budget_allocated / totalAllocated) * 100
 
             const taskAssignments = assignments.filter((a) => a.task_id === task.id)
             const taskActualCost = taskAssignments.reduce((sum, assignment) => {
