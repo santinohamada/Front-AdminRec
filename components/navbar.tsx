@@ -8,10 +8,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
 const navItems = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/resources", label: "Resources", icon: Package },
-  { href: "/team", label: "Team", icon: Users },
+  { href: "/", label: "Inicio", icon: Home },
+  { href: "/projects", label: "Proyectos", icon: FolderKanban },
+  { href: "/resources", label: "Recursos", icon: Package },
+  { href: "/team", label: "Equipo", icon: Users },
 ]
 
 export function Navbar() {
@@ -27,7 +27,7 @@ export function Navbar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
               <FolderKanban className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold">AdminRec</span>
+            
           </motion.div>
         </Link>
 
