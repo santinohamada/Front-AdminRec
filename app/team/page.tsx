@@ -168,7 +168,7 @@ export default function TeamPage() {
                   <div className="space-y-4">
                     {/* Avatar and Name */}
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg shrink-0">
                         {member.name
                           .split(" ")
                           .map((n) => n[0])
@@ -185,16 +185,16 @@ export default function TeamPage() {
                     {/* Contact Info */}
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <MailIcon className="w-4 h-4 flex-shrink-0" />
+                        <MailIcon className="w-4 h-4 shrink-0" />
                         <span className="truncate">{member.email}</span>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <PhoneIcon className="w-4 h-4 flex-shrink-0" />
+                        <PhoneIcon className="w-4 h-4 shrink-0" />
                         <span>{member.phone}</span>
                       </div>
                       {member.domicilio && (
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPinIcon className="w-4 h-4 flex-shrink-0" />
+                          <MapPinIcon className="w-4 h-4 shrink-0" />
                           <span className="truncate">{member.domicilio}</span>
                         </div>
                       )}
