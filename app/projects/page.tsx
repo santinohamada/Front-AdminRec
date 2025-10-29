@@ -273,31 +273,6 @@ export default function ProjectManagementSystem() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card">
-        <div className="px-4 md:px-6 py-4 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          >
-            {isMobileSidebarOpen ? (
-              <XIcon className="h-5 w-5" />
-            ) : (
-              <MenuIcon className="h-5 w-5" />
-            )}
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground">
-              Sistema de Gestión de Proyectos
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
-              Gestiona proyectos, tareas, recursos y presupuestos
-            </p>
-          </div>
-        </div>
-      </header>
-
       <div className="flex h-[calc(100vh-73px)] md:h-[calc(100vh-89px)] relative">
         <AnimatePresence>
           {isMobileSidebarOpen && (
