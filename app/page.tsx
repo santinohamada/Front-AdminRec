@@ -16,7 +16,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="border-border hover:border-primary transition-colors">
+            <Card className="border-border hover:border-primary transition-colors flex justify-between">
               <CardHeader>
                 <FolderKanban className="h-10 w-10 mb-2 text-primary" />
                 <CardTitle>Projects</CardTitle>
@@ -32,7 +32,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border hover:border-primary transition-colors">
+            <Card className="border-border hover:border-primary transition-colors flex justify-between">
               <CardHeader>
                 <Users className="h-10 w-10 mb-2 text-primary" />
                 <CardTitle>Equipos</CardTitle>
@@ -48,7 +48,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border hover:border-primary transition-colors">
+            <Card className="border-border hover:border-primary transition-colors flex justify-between">
               <CardHeader>
                 <Package className="h-10 w-10 mb-2 text-primary" />
                 <CardTitle>Recursos</CardTitle>
