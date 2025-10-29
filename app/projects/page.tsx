@@ -23,6 +23,9 @@ import { Modal } from "@/components/modal";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
+// --- IMPORTACIÓN DEL SKELETON MODULARIZADO ---
+import { ProjectSkeleton } from "@/components/project-skeleton"; 
+
 import type {
   Task,
   ResourceAssignment,
@@ -30,19 +33,18 @@ import type {
   Resource,
   NewTask,
   NewResource,
-  UUID, // Importar UUID para la tipificación
+  UUID,
 } from "@/lib/project-types";
 import { ResourceAssignmentForm } from "@/components/resource-assignment-form";
 import { useProjectStore } from "@/store/projectStore";
 
 export default function ProjectManagementSystem() {
   // --- 1. Hook de Carga y Estado Global ---
-  // Desestructuramos el estado global y las acciones
   const {
     projects,
     tasks,
-    resources, // Se mantiene para el ResourceForm global
-    teamMembers: allTeamMembers, // Renombrado para evitar confusión
+    resources,
+    teamMembers: allTeamMembers,
     resourceAssignments,
     isLoading,
     createProject,
@@ -59,13 +61,11 @@ export default function ProjectManagementSystem() {
     deleteAssignment,
     updateAssignment,
     init,
-    // --- Selectores del Store ---
     getResourcesByProject,
     getTeamMembersByProject,
   } = useProjectStore();
 
   useEffect(() => {
-    // Inicialización de la tienda al montar el componente
     const handleInit = async () => {
       init();
     };
@@ -73,7 +73,7 @@ export default function ProjectManagementSystem() {
   }, [init]);
 
   // --- 2. Estado de la UI ---
-  const [selectedProjectId, setSelectedProjectId] = useState<UUID | null>(null); // Usar UUID
+  const [selectedProjectId, setSelectedProjectId] = useState<UUID | null>(null);
   const [activeTab, setActiveTab] = useState<
     "tasks" | "resources" | "budget" | "team"
   >("tasks");
@@ -83,21 +83,18 @@ export default function ProjectManagementSystem() {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Modales de Proyectos
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | undefined>();
-  // Modales de Tareas
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
-  // Modales de Recursos (asignación y formulario)
-  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false); // Para ResourceAssignmentForm
-  const [isResourceFormModalOpen, setIsResourceFormModalOpen] = useState(false); // Para ResourceForm
+
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const [isResourceFormModalOpen, setIsResourceFormModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<Resource | undefined>();
-  // Modal de Reporte
+
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // --- 3. Sincronización de UI y Datos ---
-  // Seleccionar el primer proyecto por defecto si no hay uno seleccionado
   useMemo(() => {
     if (selectedProjectId === null && projects.length > 0) {
       setSelectedProjectId(projects[0].id);
@@ -117,20 +114,11 @@ export default function ProjectManagementSystem() {
 
   const isProjectClosed = selectedProject?.status === "closed";
   
-  /**
-   * @description Filtrar solo los miembros del equipo que trabajan en este proyecto.
-   */
   const projectTeamMembers = useMemo(() => {
     if (!selectedProjectId) return [];
     return getTeamMembersByProject(selectedProjectId);
   }, [selectedProjectId, getTeamMembersByProject]);
 
-  /**
-   * @description Filtrar solo los recursos asignados a tareas de este proyecto.
-   * NOTA: `ResourceList` utiliza este filtro para mostrar la lista principal de recursos,
-   * PERO el formulario de asignación (`ResourceAssignmentForm`) necesita *todos* los recursos
-   * (`resources` del store) para poder asignar cualquier recurso disponible.
-   */
   const projectResources = useMemo(() => {
     if (!selectedProjectId) return [];
     return getResourcesByProject(selectedProjectId);
@@ -148,7 +136,7 @@ export default function ProjectManagementSystem() {
 
     if (savedProject) {
       if (!("id" in projectData)) {
-        setSelectedProjectId(savedProject.id); // Seleccionar nuevo proyecto
+        setSelectedProjectId(savedProject.id);
       }
       setIsProjectModalOpen(false);
       setEditingProject(undefined);
@@ -186,7 +174,6 @@ export default function ProjectManagementSystem() {
     taskData: Omit<Task, "id"> | Task,
     resourceAssignments?: Omit<ResourceAssignment, "id" | "task_id">[]
   ) => {
-    // Si es una tarea nueva, se asegura de tener el project_id
     const dataToSave = { 
         ...taskData, 
         project_id: taskData.project_id || selectedProjectId,
@@ -253,14 +240,11 @@ export default function ProjectManagementSystem() {
     setIsMobileSidebarOpen(false);
   };
 
-  // --- 6. Renderizado ---
+  // --- 6. Renderizado Principal ---
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        Cargando datos...
-      </div>
-    );
+    // Uso del componente modularizado
+    return <ProjectSkeleton />;
   }
 
   if (error) {
@@ -341,7 +325,7 @@ export default function ProjectManagementSystem() {
           <ProjectList
             projects={projects}
             tasks={tasks}
-            selectedProjectId={selectedProjectId || projects[0].id}
+            selectedProjectId={selectedProjectId || projects[0]?.id}
             onSelectProject={handleSelectProject}
             onAddProject={() => {
               setEditingProject(undefined);
@@ -355,7 +339,6 @@ export default function ProjectManagementSystem() {
           <div className="p-4 md:p-6">
             <ProjectHeader
               project={selectedProject}
-              // Se pasa la lista completa de miembros para el menú de asignación en el header
               teamMembers={allTeamMembers} 
               onEdit={() => {
                 setEditingProject(selectedProject);
@@ -415,7 +398,6 @@ export default function ProjectManagementSystem() {
 
             {activeTab === "resources" && (
               <ResourceList
-                // PASO CLAVE: Usar solo los recursos asociados al proyecto
                 resources={projectResources} 
                 assignments={resourceAssignments}
                 tasks={projectTasks}
@@ -438,7 +420,6 @@ export default function ProjectManagementSystem() {
               <BudgetOverview
                 project={selectedProject}
                 tasks={projectTasks}
-                // PASO CLAVE: Usar solo los recursos asociados al proyecto
                 resources={projectResources} 
                 assignments={resourceAssignments}
               />
@@ -446,7 +427,6 @@ export default function ProjectManagementSystem() {
 
             {activeTab === "team" && (
               <TeamList 
-                // PASO CLAVE: Usar solo los miembros del equipo asociados al proyecto
                 teamMembers={projectTeamMembers} 
                 tasks={projectTasks} 
               />
@@ -455,9 +435,7 @@ export default function ProjectManagementSystem() {
         </main>
       </div>
 
-      {/* --- Modales --- */}
-      
-      {/* Modal de Proyecto */}
+      {/* --- Modales --- (Sin cambios en su lógica) */}
       <Modal
         isOpen={isProjectModalOpen}
         onClose={() => {
@@ -468,7 +446,7 @@ export default function ProjectManagementSystem() {
       >
         <ProjectForm
           project={editingProject}
-          teamMembers={allTeamMembers} // Se usa la lista completa para poder asignar cualquier miembro disponible
+          teamMembers={allTeamMembers}
           onSave={handleSaveProject}
           onCancel={() => {
             setIsProjectModalOpen(false);
@@ -477,7 +455,6 @@ export default function ProjectManagementSystem() {
         />
       </Modal>
 
-      {/* Modal de Tarea */}
       <Modal
         isOpen={isTaskModalOpen}
         onClose={() => {
@@ -488,10 +465,10 @@ export default function ProjectManagementSystem() {
       >
         <TaskForm
           task={editingTask}
-          projectId={selectedProjectId || projects[0].id}
+          projectId={selectedProjectId || projects[0]?.id}
           project={selectedProject}
-          teamMembers={allTeamMembers} // Se usa la lista completa para asignar
-          resources={resources} // Se usa la lista completa para asignar
+          teamMembers={allTeamMembers}
+          resources={resources}
           assignments={resourceAssignments}
           tasks={tasks}
           onSave={handleSaveTask}
@@ -502,7 +479,6 @@ export default function ProjectManagementSystem() {
         />
       </Modal>
 
-      {/* Modal de Formulario de Recurso (Crear/Editar recurso global) */}
       <Modal
         isOpen={isResourceFormModalOpen}
         onClose={() => {
@@ -521,7 +497,6 @@ export default function ProjectManagementSystem() {
         />
       </Modal>
 
-      {/* Modal de Asignación de Recurso (Asignar a una tarea del proyecto) */}
       <Modal
         isOpen={isResourceModalOpen}
         onClose={() => setIsResourceModalOpen(false)}
@@ -529,11 +504,9 @@ export default function ProjectManagementSystem() {
       >
         <ResourceAssignmentForm
           tasks={projectTasks}
-          resources={resources} // Se usa la lista COMPLETA de recursos para poder asignar cualquiera
+          resources={resources}
           assignments={resourceAssignments}
           onAssign={(data) => {
-            // Este handler debería actualizar la tarea o crear una asignación directamente si es independiente
-            // Por simplicidad, aquí solo se cierra el modal
             console.log("Asignando recurso:", data); 
             setIsResourceModalOpen(false);
           }}
@@ -541,7 +514,6 @@ export default function ProjectManagementSystem() {
         />
       </Modal>
 
-      {/* Modal de Reporte Semanal */}
       <Modal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
@@ -551,7 +523,6 @@ export default function ProjectManagementSystem() {
         <WeeklyReport
           project={selectedProject}
           tasks={projectTasks}
-          // PASO CLAVE: Usar solo los recursos asociados al proyecto
           resources={projectResources} 
           assignments={resourceAssignments}
         />
