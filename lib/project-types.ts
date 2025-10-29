@@ -74,3 +74,5 @@ export type NewProject = Omit<Project, "id">;
 export type NewTask = Omit<Task, "id">;
 export type NewResource = Omit<Resource, "id">;
 export type NewResourceAssignment = Omit<ResourceAssignment, "id">;
+export type NewTeamMember = Omit<TeamMember, "id">
+
