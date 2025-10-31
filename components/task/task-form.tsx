@@ -2,8 +2,8 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import { Button } from "./ui/button"; // Assuming Button is available
-import { Input } from "./ui/input"; // Assuming Input is available
+import { Button } from "../ui/button"; // Assuming Button is available
+import { Input } from "../ui/input"; // Assuming Input is available
 import { motion } from "framer-motion";
 import { AlertTriangleIcon, PlusIcon, XIcon } from "lucide-react";
 
@@ -18,7 +18,7 @@ import type {
   NewTask,
   NewResourceAssignment,
   TaskStatus,
-} from "../lib/project-types"; // Assuming relative path is correct
+} from "../../lib/project-types"; // Assuming relative path is correct
 
 // Asumiendo que esta función existe en las utilidades.
 // Si no la tienes, necesitarás añadirla a project-utils.ts
@@ -39,7 +39,7 @@ import {
   validateTaskDatesInProjectRange,
   validateProjectBudget,
   validateResourceHours,
-} from "../lib/project-utils"; // Asegúrate de que este path sea correcto
+} from "../../lib/project-utils"; // Asegúrate de que este path sea correcto
 
 interface TaskFormProps {
   task?: Task;

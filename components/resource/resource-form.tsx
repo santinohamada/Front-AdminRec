@@ -18,7 +18,9 @@ export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) 
     name: resource?.name || "",
     type: resource?.type || "human",
     hourly_rate: resource?.hourly_rate || 0,
-    availability_hours: resource?.availability_hours || 160,
+    total_hours: resource?.total_hours || 160,
+    assigned_hours:0,
+    available_hours:0
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,7 +36,7 @@ export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) 
       return
     }
 
-    if (formData.availability_hours <= 0) {
+    if (formData.total_hours <= 0) {
       alert("Las horas de disponibilidad deben ser mayores a 0")
       return
     }
@@ -99,12 +101,12 @@ export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Horas Disponibles *</label>
+          <label className="block text-sm font-medium text-foreground mb-2">Horas Totales Asignables</label>
           <Input
             type="number"
             min="0"
-            value={formData.availability_hours}
-            onChange={(e) => setFormData({ ...formData, availability_hours: Number(e.target.value) })}
+            value={formData.total_hours}
+            onChange={(e) => setFormData({ ...formData, total_hours: Number(e.target.value) })}
             required
           />
         </div>

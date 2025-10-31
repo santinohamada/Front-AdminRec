@@ -71,6 +71,8 @@ interface ProjectStore {
   // --- Asignaciones ---
   updateAssignment: (data: ResourceAssignment) => Promise<ResourceAssignment | null>
   deleteAssignment: (id: UUID) => Promise<void>
+  createAssignment: (data: NewResourceAssignment) => Promise<ResourceAssignment | null>
+
   // Se ha omitido `createAssignment` independiente ya que `createTask` y `updateTask` la manejan en el primer fragmento.
   // Si se necesita una acción independiente, se puede agregar.
 
@@ -307,6 +309,20 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     // --- Asignaciones ---
+    // dentro de create(...) -> acciones:
+createAssignment: async (data: ResourceAssignment) => {
+  try {
+    // usa assignmentService si lo tienes, o tu API/mock
+    const created = await assignmentService.createAssignment(data);
+    set((state) => ({ resourceAssignments: [...state.resourceAssignments, created] }));
+    return created;
+  } catch (err) {
+    console.error("Error creating assignment:", err);
+    set({ error: err as Error });
+    return null;
+  }
+},
+
     updateAssignment: async (data) => {
       try {
         const updated = await assignmentService.updateAssignment(data.id, data)

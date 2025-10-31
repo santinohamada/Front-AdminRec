@@ -195,5 +195,20 @@ export const assignmentService = {
         if (USE_MOCKS) return
         return apiFetch(`/assignments/${id}`, { method: "DELETE" })
     },
-    // Se omite `createAssignment` ya que se gestiona dentro de `taskService.createTask/updateTask`
+    async createAssignment(data: NewResourceAssignment): Promise<ResourceAssignment> {
+        if (USE_MOCKS) {
+            const datamock = mockApi.getResourceAssignments()
+            const newAssignment = {
+                id: crypto.randomUUID(),
+                task_id: data.task_id,
+                resource_id: data.resource_id,
+                hours_assigned: data.hours_assigned,
+                start_date: data.start_date,
+                end_date: data.end_date,
+            }
+            return newAssignment
+        }
+        return apiFetch(`/assignments`, { method: "POST",body:JSON.stringify(data) })
+    },
+
 }

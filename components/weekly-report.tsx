@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import type { Project, Task, Resource, ResourceAssignment } from "@/lib/project-types"
-import { formatCurrency, formatDate, getStatusInfo, calculateActualCost } from "@/lib/project-utils"
+import { formatCurrency, formatDate, calculateActualCost, getTaskStatusInfo } from "@/lib/project-utils"
 import {
   CheckCircle2Icon,
   ClockIcon,
@@ -12,15 +12,18 @@ import {
   TrendingDownIcon,
 } from "lucide-react"
 
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+
 interface WeeklyReportProps {
   project: Project
   tasks: Task[]
   resources: Resource[]
   assignments: ResourceAssignment[]
+  isPdfMode?: boolean
 }
 
-export function WeeklyReport({ project, tasks, resources, assignments }: WeeklyReportProps) {
-  // Calculate statistics
+export function WeeklyReport({ project, tasks, resources, assignments, isPdfMode = false }: WeeklyReportProps) {
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((t) => t.status === "completed").length
   const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length
@@ -32,11 +35,22 @@ export function WeeklyReport({ project, tasks, resources, assignments }: WeeklyR
   const actualCost = calculateActualCost(tasks, assignments, resources)
   const budgetUsedPercentage = (actualCost / project.total_budget) * 100
 
-  // Mock recent activities (since we don't have real history)
   const recentActivities = [
-    { type: "completed", task: tasks.find((t) => t.status === "completed"), date: "2024-01-15" },
-    { type: "started", task: tasks.find((t) => t.status === "in_progress"), date: "2024-01-14" },
-    { type: "blocked", task: tasks.find((t) => t.status === "blocked"), date: "2024-01-13" },
+    {
+      type: "completed",
+      task: tasks.find((t) => t.status === "completed"),
+      date: "2024-01-15",
+    },
+    {
+      type: "started",
+      task: tasks.find((t) => t.status === "in_progress"),
+      date: "2024-01-14",
+    },
+    {
+      type: "blocked",
+      task: tasks.find((t) => t.status === "blocked"),
+      date: "2024-01-13",
+    },
   ].filter((a) => a.task)
 
   return (
@@ -47,179 +61,279 @@ export function WeeklyReport({ project, tasks, resources, assignments }: WeeklyR
       transition={{ duration: 0.4 }}
     >
       {/* Header */}
-      <div className="border-b border-border pb-4">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Reporte Semanal</h2>
-        <p className="text-sm text-muted-foreground">
-          Proyecto: <span className="font-medium text-foreground">{project.name}</span>
+      <div className={`border-b pb-4 ${isPdfMode ? "border-gray-200" : "border-border"}`}>
+        <h2 className={`text-2xl font-bold mb-2 ${isPdfMode ? "text-black" : "text-foreground"}`}>Reporte Semanal</h2>
+        <p className={`text-sm ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>
+          Proyecto:{" "}
+          <span className={`font-medium ${isPdfMode ? "text-black" : "text-foreground"}`}>{project.name}</span>
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className={`text-xs ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
           Generado el {formatDate(new Date().toISOString().split("T")[0])}
         </p>
       </div>
 
       {/* Task Summary */}
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3">Resumen de Tareas</h3>
+        <h3 className={`text-lg font-semibold mb-3 ${isPdfMode ? "text-black" : "text-foreground"}`}>
+          Resumen de Tareas
+        </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
+          {/* Tarjeta 1: Completadas */}
+          <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-green-600">Completadas</CardTitle>
               <CheckCircle2Icon className="h-5 w-5 text-green-600" />
-              <span className="text-sm text-green-600 font-medium">Completadas</span>
-            </div>
-            <p className="text-2xl font-bold text-green-600">{completedTasks}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((completedTasks / totalTasks) * 100).toFixed(0)}% del total
-            </p>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{completedTasks}</div>
+              <p className={`text-xs mt-1 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
+                {((completedTasks / totalTasks) * 100).toFixed(0)}% del total
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
+          {/* Tarjeta 2: En Progreso */}
+          <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-600">En Progreso</CardTitle>
               <ClockIcon className="h-5 w-5 text-blue-600" />
-              <span className="text-sm text-blue-600 font-medium">En Progreso</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-600">{inProgressTasks}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((inProgressTasks / totalTasks) * 100).toFixed(0)}% del total
-            </p>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{inProgressTasks}</div>
+              <p className={`text-xs mt-1 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
+                {((inProgressTasks / totalTasks) * 100).toFixed(0)}% del total
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
+          {/* Tarjeta 3: Bloqueadas */}
+          <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-red-600">Bloqueadas</CardTitle>
               <AlertCircleIcon className="h-5 w-5 text-red-600" />
-              <span className="text-sm text-red-600 font-medium">Bloqueadas</span>
-            </div>
-            <p className="text-2xl font-bold text-red-600">{blockedTasks}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((blockedTasks / totalTasks) * 100).toFixed(0)}% del total
-            </p>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{blockedTasks}</div>
+              <p className={`text-xs mt-1 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
+                {((blockedTasks / totalTasks) * 100).toFixed(0)}% del total
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <XCircleIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600 font-medium">Sin Iniciar</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-600">{notStartedTasks}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((notStartedTasks / totalTasks) * 100).toFixed(0)}% del total
-            </p>
-          </div>
+          {/* Tarjeta 4: Sin Iniciar */}
+          <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${isPdfMode ? "text-gray-700" : "text-foreground"}`}>
+                Sin Iniciar
+              </CardTitle>
+              <XCircleIcon className={`h-5 w-5 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${isPdfMode ? "text-gray-700" : "text-foreground"}`}>
+                {notStartedTasks}
+              </div>
+              <p className={`text-xs mt-1 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
+                {((notStartedTasks / totalTasks) * 100).toFixed(0)}% del total
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Progress Overview */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3">Avance General</h3>
-        <div className="bg-card border border-border rounded-lg p-4">
+      <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+        <CardHeader className="pb-4">
+          <CardTitle className={`text-lg ${isPdfMode ? "text-black" : "text-foreground"}`}>Avance General</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Progreso Promedio</span>
-            <span className="text-2xl font-bold text-foreground">{avgProgress.toFixed(1)}%</span>
+            <span className={`text-sm ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>
+              Progreso Promedio
+            </span>
+            <span className={`text-2xl font-bold ${isPdfMode ? "text-black" : "text-foreground"}`}>
+              {avgProgress.toFixed(1)}%
+            </span>
           </div>
-          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-            <motion.div
-              className="h-full bg-linear-to-r from-blue-500 to-cyan-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${avgProgress}%` }}
-              transition={{ duration: 1, ease: "easeOut" }}
-            />
-          </div>
-        </div>
-      </div>
+          {isPdfMode ? (
+            <div className="relative h-3 w-full overflow-hidden rounded-full" style={{ backgroundColor: "#e5e7eb" }}>
+              <div
+                className="h-full transition-all"
+                style={{
+                  backgroundColor: "#3b82f6",
+                  width: `${avgProgress}%`,
+                }}
+              />
+            </div>
+          ) : (
+            <Progress value={avgProgress} className="h-3" />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Budget Status */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3">Estado del Presupuesto</h3>
-        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Presupuesto Total</span>
-            <span className="font-semibold text-foreground">{formatCurrency(project.total_budget)}</span>
+      <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+        <CardHeader className="pb-4">
+          <CardTitle className={`text-lg ${isPdfMode ? "text-black" : "text-foreground"}`}>
+            Estado del Presupuesto
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>
+                Presupuesto Total
+              </span>
+              <span className={`font-semibold ${isPdfMode ? "text-black" : "text-foreground"}`}>
+                {formatCurrency(project.total_budget)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>Gasto Actual</span>
+              <span className={`font-semibold ${isPdfMode ? "text-black" : "text-foreground"}`}>
+                {formatCurrency(actualCost)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>Disponible</span>
+              <span className={`font-semibold ${isPdfMode ? "text-black" : "text-foreground"}`}>
+                {formatCurrency(project.total_budget - actualCost)}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Gasto Actual</span>
-            <span className="font-semibold text-foreground">{formatCurrency(actualCost)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Disponible</span>
-            <span className="font-semibold text-foreground">{formatCurrency(project.total_budget - actualCost)}</span>
-          </div>
-          <div className="pt-2 border-t border-border">
+
+          <div className={`pt-4 border-t ${isPdfMode ? "border-gray-200" : "border-border"}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Uso del Presupuesto</span>
+              <span className={`text-sm ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>
+                Uso del Presupuesto
+              </span>
               <div className="flex items-center gap-2">
                 {budgetUsedPercentage > 90 ? (
-                  <TrendingUpIcon className="h-4 w-4 text-red-500" />
+                  <TrendingUpIcon className="h-4 w-4 text-red-600" />
                 ) : (
                   <TrendingDownIcon className="h-4 w-4 text-green-500" />
                 )}
-                <span className={`font-bold ${budgetUsedPercentage > 90 ? "text-red-500" : "text-green-500"}`}>
+                <span className={`font-bold ${budgetUsedPercentage > 90 ? "text-red-600" : "text-green-500"}`}>
                   {budgetUsedPercentage.toFixed(1)}%
                 </span>
               </div>
             </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div
+              className="w-full rounded-full h-2 overflow-hidden"
+              style={isPdfMode ? { backgroundColor: "#e5e7eb" } : undefined}
+            >
               <motion.div
-                className={`h-full ${budgetUsedPercentage > 90 ? "bg-red-500" : "bg-green-500"}`}
+                className={budgetUsedPercentage > 90 ? "bg-red-600" : "bg-green-500"}
+                style={
+                  isPdfMode
+                    ? {
+                        height: "100%",
+                        backgroundColor: budgetUsedPercentage > 90 ? "#dc2626" : "#22c55e",
+                        width: `${Math.min(budgetUsedPercentage, 100)}%`,
+                      }
+                    : { height: "100%" }
+                }
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(budgetUsedPercentage, 100)}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
+                transition={{ duration: isPdfMode ? 0 : 1, ease: "easeOut" }}
               />
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Recent Activity */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3">Actividad Reciente</h3>
-        <div className="bg-card border border-border rounded-lg divide-y divide-border">
-          {recentActivities.length > 0 ? (
-            recentActivities.map((activity, idx) => {
-              const statusInfo = getStatusInfo(activity.task!.status)
-              return (
-                <div key={idx} className="p-4 flex items-start gap-3">
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${statusInfo.color}`}>{statusInfo.label}</div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{activity.task!.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{formatDate(activity.date)}</p>
-                  </div>
-                </div>
-              )
-            })
-          ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">No hay actividad reciente</div>
-          )}
-        </div>
-      </div>
+      {/* Recent Activity & Resource Utilization */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+          <CardHeader>
+            <CardTitle className={`text-lg ${isPdfMode ? "text-black" : "text-foreground"}`}>
+              Actividad Reciente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentActivities.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivities.map((activity, idx) => {
+                  const statusInfo = getTaskStatusInfo(activity.task!.status)
+                  return (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className={`mt-1 px-2 py-0.5 rounded text-xs font-medium ${statusInfo.color}`}>
+                        {statusInfo.label}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${isPdfMode ? "text-black" : "text-foreground"}`}>
+                          {activity.task!.name}
+                        </p>
+                        <p className={`text-xs mt-1 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
+                          {formatDate(activity.date)}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className={`p-4 text-center text-sm ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
+                No hay actividad reciente
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Resource Utilization */}
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3">Utilización de Recursos</h3>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="space-y-3">
-            {resources.slice(0, 5).map((resource) => {
-              const resourceAssignments = assignments.filter((a) => a.resource_id === resource.id)
-              const totalHours = resourceAssignments.reduce((sum, a) => sum + a.hours_assigned, 0)
-              const utilization = (totalHours / resource.availability_hours) * 100
+        <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
+          <CardHeader>
+            <CardTitle className={`text-lg ${isPdfMode ? "text-black" : "text-foreground"}`}>
+              Utilización de Recursos
+            </CardTitle>
+            <CardDescription className={isPdfMode ? "text-gray-600" : ""}>
+              Top 5 recursos más utilizados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {resources.slice(0, 5).map((resource) => {
+                const resourceAssignments = assignments.filter((a) => a.resource_id === resource.id)
+                const totalHours = resourceAssignments.reduce((sum, a) => sum + a.hours_assigned, 0)
+                const utilization = (totalHours / resource.available_hours) * 100
 
-              return (
-                <div key={resource.id}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-foreground">{resource.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {totalHours}h / {resource.availability_hours}h
-                    </span>
+                return (
+                  <div key={resource.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-sm ${isPdfMode ? "text-black" : "text-foreground"}`}>{resource.name}</span>
+                      <span className={`text-xs ${isPdfMode ? "text-gray-600" : "text-muted-foreground"}`}>
+                        {totalHours}h / {resource.available_hours}h
+                      </span>
+                    </div>
+                    {isPdfMode ? (
+                      <div
+                        className="relative h-2 w-full overflow-hidden rounded-full"
+                        style={{ backgroundColor: "#e5e7eb" }}
+                      >
+                        <div
+                          className="h-full transition-all"
+                          style={{
+                            backgroundColor: utilization > 100 ? "#dc2626" : utilization > 80 ? "#eab308" : "#3b82f6",
+                            width: `${Math.min(utilization, 100)}%`,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <Progress
+                        value={utilization}
+                        className={`h-2 ${
+                          utilization > 100
+                            ? "[&>div]:bg-red-600"
+                            : utilization > 80
+                              ? "[&>div]:bg-yellow-500"
+                              : "[&>div]:bg-blue-500"
+                        }`}
+                      />
+                    )}
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full ${utilization > 100 ? "bg-red-500" : utilization > 80 ? "bg-yellow-500" : "bg-blue-500"}`}
-                      style={{ width: `${Math.min(utilization, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </motion.div>
   )

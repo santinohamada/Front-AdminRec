@@ -46,7 +46,7 @@ export function TaskList({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 ">
           <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => onFilterChange("all")}>
             Todas ({tasks.length})
           </Button>
