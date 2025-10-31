@@ -12,25 +12,22 @@ interface ResourceAssignmentListProps {
   resources: Resource[]; // recursos del proyecto (pueden venir filtrados por store)
   assignments: ResourceAssignment[]; // asignaciones ya filtradas para el proyecto
   tasks: Task[]; // tareas del proyecto
-  onAddAssignment: () => void;
-  onEditAssignment: (assignment: ResourceAssignment) => void;
-  onRemoveAssignment: (assignmentId: string) => void;
-  onUpdateAssignment?: (assignment: ResourceAssignment) => void; // opcional
+  
+
 }
 
 export default function ResourceAssignmentList({
   resources,
   assignments,
   tasks,
-  onAddAssignment,
-  onEditAssignment,
-  onRemoveAssignment,
+
 }: ResourceAssignmentListProps) {
   // Agrupamos asignaciones por recurso para mostrar por recurso
   const byResource = resources.map((res) => ({
     resource: res,
     assignments: assignments.filter((a) => a.resource_id === res.id),
   }));
+  console.log(byResource);
 
   return (
     <div>

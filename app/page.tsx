@@ -19,7 +19,7 @@ export default function HomePage() {
             <Card className="border-border hover:border-primary transition-colors flex justify-between">
               <CardHeader>
                 <FolderKanban className="h-10 w-10 mb-2 text-primary" />
-                <CardTitle>Projects</CardTitle>
+                <CardTitle>Proyectos</CardTitle>
                 <CardDescription>Administra los proyectos de tu empresa  mediante la asignacion de equipos y recursos</CardDescription>
               </CardHeader>
               <CardContent>

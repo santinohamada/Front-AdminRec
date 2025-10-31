@@ -242,12 +242,12 @@ export function ProjectHeader({
 
       {/* Info row: manager, dates, budget */}
       <motion.div
-        className="flex mt-4 gap-3  text-sm "
+        className="flex mt-4 gap-3 flex-wrap  text-sm "
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.18 }}
       >
-        <div className="flex items-center gap-1 truncate">
+        <div className="flex items-center gap-1 ">
           <UserIcon className="h-4 w-4 text-muted-foreground" />
           <span className="text-muted-foreground truncate">
             Responsable: <span className="font-medium text-foreground">{manager?.name || "Desconocido"}</span>

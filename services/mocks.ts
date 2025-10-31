@@ -142,7 +142,7 @@ export let INITIAL_RESOURCES: Resource[] = [
   {
     id: "res-3" as UUID,
     name: "Servidor de Pruebas",
-    type: "equipment",
+    type: "infrastructure",
     hourly_rate: 15,
     assigned_hours: 0,
     available_hours: 168, // Disponible 24/7 en una semana

@@ -16,7 +16,7 @@ export default function ResourcesPage() {
   const { resources, createResource, updateResource, deleteResource, getResourceUtilization } = useProjectStore()
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterType, setFilterType] = useState<"all" | "human" | "material" | "equipment">("all")
+  const [filterType, setFilterType] = useState<"all" | "human" | "software" | "infrastructure">("all")
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false)
   const [editingResource, setEditingResource] = useState<Resource | undefined>()
 
@@ -61,8 +61,8 @@ export default function ResourcesPage() {
   const getTypeLabel = (type: string) => {
     const labels = {
       human: "Humano",
-      material: "Material",
-      equipment: "Equipo",
+      material: "Software",
+      infrastructure: "Infraestructura",
     }
     return labels[type as keyof typeof labels] || type
   }
@@ -71,7 +71,7 @@ export default function ResourcesPage() {
     const colors = {
       human: "bg-blue-100 text-blue-800",
       material: "bg-green-100 text-green-800",
-      equipment: "bg-purple-100 text-purple-800",
+      infrastructure: "bg-purple-100 text-purple-800",
     }
     return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800"
   }
@@ -170,18 +170,18 @@ export default function ResourcesPage() {
                 Humanos
               </Button>
               <Button
-                variant={filterType === "material" ? "default" : "outline"}
-                onClick={() => setFilterType("material")}
+                variant={filterType === "software" ? "default" : "outline"}
+                onClick={() => setFilterType("software")}
                 size="sm"
               >
-                Materiales
+                Software
               </Button>
               <Button
-                variant={filterType === "equipment" ? "default" : "outline"}
-                onClick={() => setFilterType("equipment")}
+                variant={filterType === "infrastructure" ? "default" : "outline"}
+                onClick={() => setFilterType("infrastructure")}
                 size="sm"
               >
-                Equipos
+                Infraestructura
               </Button>
             </div>
           </div>

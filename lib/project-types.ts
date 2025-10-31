@@ -1,6 +1,6 @@
 export type TaskStatus = "not_started" | "in_progress" | "completed" | "blocked";
 export type ProjectStatus = "active" | "paused" | "closed";
-export type ResourceType = "human" | "equipment" | "material";
+export type ResourceType = "human" | "infrastructure" | "software";
 export type UUID = string; // Usaremos strings para los IDs
 
 export interface TeamMember {

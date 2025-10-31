@@ -77,10 +77,12 @@ export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) 
         <select
           className="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground"
           value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value as "human" | "material" })}
+          onChange={(e) => setFormData({ ...formData, type: e.target.value as "human" | "software" | "infrastructure" })}
         >
-          <option value="Humano">Humano</option>
-          <option value="Material">Material</option>
+          <option value="human">Humano</option>
+          <option value="software">Software</option>
+          <option value="infrastructure">Infraestructura</option>
+       
         </select>
       </motion.div>
 
@@ -101,7 +103,7 @@ export function ResourceForm({ resource, onSave, onCancel }: ResourceFormProps) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Horas Totales Asignables</label>
+          <label className="block text-sm font-medium text-foreground mb-2">Horas totales </label>
           <Input
             type="number"
             min="0"
