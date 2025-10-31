@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { PlusIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { TaskCard } from "./task-card"
-import type { Task, Resource, ResourceAssignment } from "@/lib/project-types"
-import { motion, AnimatePresence } from "framer-motion"
+import { PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TaskCard } from "./task-card";
+import type { Task, Resource, ResourceAssignment } from "@/lib/project-types";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface TaskListProps {
-  tasks: Task[]
-  resources: Resource[]
-  assignments: ResourceAssignment[]
-  filter: "all" | "completed" | "in-progress"
-  onFilterChange: (filter: "all" | "completed" | "in-progress") => void
-  onAddTask: () => void
-  onEditTask: (task: Task) => void
-  onDeleteTask: (taskId: string) => void
-  isProjectClosed?: boolean // Added prop to disable actions when project is closed
+  tasks: Task[];
+  resources: Resource[];
+  assignments: ResourceAssignment[];
+  filter: "all" | "completed" | "in-progress";
+  onFilterChange: (filter: "all" | "completed" | "in-progress") => void;
+  onAddTask: () => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  isProjectClosed?: boolean; // Added prop to disable actions when project is closed
 }
 
 export function TaskList({
@@ -33,45 +33,52 @@ export function TaskList({
     filter === "completed"
       ? tasks.filter((t) => t.status === "completed")
       : filter === "in-progress"
-        ? tasks.filter((t) => t.status === "in_progress" || t.status === "blocked")
-        : tasks
+      ? tasks.filter(
+          (t) => t.status === "in_progress" || t.status === "blocked"
+        )
+      : tasks;
 
-  const completedCount = tasks.filter((t) => t.status === "completed").length
-  const inProgressCount = tasks.filter((t) => t.status === "in_progress" || t.status === "blocked").length
+  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const inProgressCount = tasks.filter(
+    (t) => t.status === "in_progress" || t.status === "blocked"
+  ).length;
 
   return (
     <div>
-     <motion.div
-  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6"
-  initial={{ opacity: 0, y: -10 }}
-  animate={{ opacity: 1, y: 0 }}
->
-  <div className="flex flex-wrap gap-2">
-    <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => onFilterChange("all")}>
-      Todas ({tasks.length})
-    </Button>
-    <Button
-      variant={filter === "in-progress" ? "default" : "outline"}
-      size="sm"
-      onClick={() => onFilterChange("in-progress")}
-    >
-      En Progreso ({inProgressCount})
-    </Button>
-    <Button
-      variant={filter === "completed" ? "default" : "outline"}
-      size="sm"
-      onClick={() => onFilterChange("completed")}
-    >
-      Completadas ({completedCount})
-    </Button>
-  </div>
+      <motion.div
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onFilterChange("all")}
+          >
+            Todas ({tasks.length})
+          </Button>
+          <Button
+            variant={filter === "in-progress" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onFilterChange("in-progress")}
+          >
+            En Progreso ({inProgressCount})
+          </Button>
+          <Button
+            variant={filter === "completed" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onFilterChange("completed")}
+          >
+            Completadas ({completedCount})
+          </Button>
+        </div>
 
-  <Button onClick={onAddTask} disabled={isProjectClosed}>
-    <PlusIcon className="h-4 w-4 mr-2" />
-    Agregar Tarea
-  </Button>
-</motion.div>
-
+        <Button onClick={onAddTask} disabled={isProjectClosed}>
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Agregar Tarea
+        </Button>
+      </motion.div>
 
       <AnimatePresence mode="popLayout">
         <motion.div
@@ -90,8 +97,6 @@ export function TaskList({
             <TaskCard
               key={task.id}
               task={task}
-              resources={resources}
-              assignments={assignments}
               onEdit={onEditTask}
               onDelete={onDeleteTask}
               isProjectClosed={isProjectClosed} // Pass closed status to task card
@@ -111,5 +116,5 @@ export function TaskList({
         </motion.div>
       )}
     </div>
-  )
+  );
 }

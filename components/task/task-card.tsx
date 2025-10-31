@@ -4,22 +4,28 @@ import { EditIcon, TrashIcon, AlertCircleIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Task, Resource, ResourceAssignment } from "@/lib/project-types"
 import { formatCurrency, formatDate, getTaskStatusInfo } from "@/lib/project-utils"
 import { motion } from "framer-motion"
+import { useProjectStore } from "@/store/projectStore" // 👈 se conecta al store global
+import type { Task } from "@/lib/project-types"
 
 interface TaskCardProps {
   task: Task
-  resources: Resource[]
-  assignments: ResourceAssignment[]
   onEdit: (task: Task) => void
   onDelete: (taskId: string) => void
-  isProjectClosed?: boolean // Added prop to disable actions when project is closed
+  isProjectClosed?: boolean
 }
 
-export function TaskCard({ task, resources, assignments, onEdit, onDelete, isProjectClosed = false }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete, isProjectClosed = false }: TaskCardProps) {
+  // 👇 obtenemos datos del store global
+  const resources = useProjectStore((s) => s.resources)
+  const assignments = useProjectStore((s) => s.resourceAssignments)
+const team = useProjectStore(s=>s.teamMembers)
   const taskAssignments = assignments.filter((a) => a.task_id === task.id)
   const statusInfo = getTaskStatusInfo(task.status)
+
+  // 👇 buscamos el nombre del responsable (si está asignado)
+  const assignee = team.find((member) => member.id === task.assignee_id)?.name || "Sin asignar"
 
   return (
     <motion.div
@@ -39,8 +45,10 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
                 {statusInfo.label}
               </Badge>
             </div>
+
             <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
 
+            {/* Barra de progreso */}
             <div className="mb-4">
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-muted-foreground">Progreso</span>
@@ -58,10 +66,11 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
               </div>
             </div>
 
+            {/* Info general */}
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex flex-col">
                 <span className="text-muted-foreground text-xs">Asignado a</span>
-                <span className="text-foreground font-medium">{task.assignee_id|| "Sin asignar"}</span>
+                <span className="text-foreground font-medium">{assignee}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-muted-foreground text-xs">Fecha de Vencimiento</span>
@@ -77,6 +86,7 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
               </div>
             </div>
 
+            {/* Recursos asignados */}
             {taskAssignments.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {taskAssignments.map((assignment) => {
@@ -91,6 +101,7 @@ export function TaskCard({ task, resources, assignments, onEdit, onDelete, isPro
             )}
           </div>
 
+          {/* Botones */}
           <div className="flex gap-2 ml-4">
             <Button
               variant="ghost"
