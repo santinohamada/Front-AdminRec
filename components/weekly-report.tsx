@@ -77,7 +77,7 @@ export function WeeklyReport({ project, tasks, resources, assignments, isPdfMode
         <h3 className={`text-lg font-semibold mb-3 ${isPdfMode ? "text-black" : "text-foreground"}`}>
           Resumen de Tareas
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {/* Tarjeta 1: Completadas */}
           <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -106,19 +106,7 @@ export function WeeklyReport({ project, tasks, resources, assignments, isPdfMode
             </CardContent>
           </Card>
 
-          {/* Tarjeta 3: Bloqueadas */}
-          <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-red-600">Bloqueadas</CardTitle>
-              <AlertCircleIcon className="h-5 w-5 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{blockedTasks}</div>
-              <p className={`text-xs mt-1 ${isPdfMode ? "text-gray-500" : "text-muted-foreground"}`}>
-                {((blockedTasks / totalTasks) * 100).toFixed(0)}% del total
-              </p>
-            </CardContent>
-          </Card>
+        
 
           {/* Tarjeta 4: Sin Iniciar */}
           <Card className={isPdfMode ? "bg-white border border-gray-200" : ""}>
