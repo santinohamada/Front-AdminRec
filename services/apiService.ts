@@ -63,21 +63,20 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
 // --- Bootstrap ---
 export const bootstrap = async () => {
-  if (USE_MOCKS) {
-    const projects = getLocalData("projects", INITIAL_PROJECTS)
-    const tasks = getLocalData("tasks", INITIAL_TASKS)
-    const resources = getLocalData("resources", INITIAL_RESOURCES)
-    const teamMembers = getLocalData("team", INITIAL_TEAM)
-    const resourceAssignments = getLocalData("assignments", INITIAL_ASSIGNMENTS)
-
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ projects, tasks, resources, teamMembers, resourceAssignments })
-      }, 300)
-    })
+    if (USE_MOCKS && typeof window !== "undefined") {
+      const projects = getLocalData("projects", INITIAL_PROJECTS)
+      const tasks = getLocalData("tasks", INITIAL_TASKS)
+      const resources = getLocalData("resources", INITIAL_RESOURCES)
+      const teamMembers = getLocalData("team", INITIAL_TEAM)
+      const resourceAssignments = getLocalData("assignments", INITIAL_ASSIGNMENTS)
+  
+      return { projects, tasks, resources, teamMembers, resourceAssignments }
+    }
+    // Llamada a API real
+    const response = await fetch(`${API_BASE_URL}/bootstrap`)
+    if (!response.ok) throw new Error("Error fetching bootstrap")
+    return response.json()
   }
-  return await apiFetch("/bootstrap")
-}
 
 // --- PROJECTS ---
 export const projectService = {

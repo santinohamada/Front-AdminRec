@@ -23,6 +23,7 @@ import type {
   NewResourceAssignment,
   UUID,
 } from "@/lib/project-types"
+import { loadFromMockStorage } from "./loadMocks"
 
 /**
  * Interfaz unificada para el Store de Proyectos
@@ -73,6 +74,7 @@ interface ProjectStore {
   getResourcesByProject: (projectId: UUID) => Resource[]
   getTeamMembersByProject: (projectId: UUID) => TeamMember[]
   getTeamMemberWorkload: (memberId: UUID) => number
+  
 }
 
 // ------------------------------------
@@ -84,12 +86,12 @@ export const useProjectStore = create<ProjectStore>()(
   devtools(
     (set, get) => ({
       // Estado Inicial
-      projects: localStorage.getItem("mock_projects") ? JSON.parse(localStorage.getItem("mock_projects")!) : [],
-      tasks: localStorage.getItem("mock_tasks") ? JSON.parse(localStorage.getItem("mock_tasks")!) : [],
+      projects: loadFromMockStorage("mock_projects") ,
+      tasks: loadFromMockStorage("mock_tasks") ,
      
-      resources: localStorage.getItem("mock_resources") ? JSON.parse(localStorage.getItem("mock_resources")!) : [],
-      teamMembers: localStorage.getItem("mock_team") ? JSON.parse(localStorage.getItem("mock_team")!) : [],
-      resourceAssignments: localStorage.getItem("mock_asignments") ? JSON.parse(localStorage.getItem("mock_asignments")!) : [],
+      resources: loadFromMockStorage("mock_resources") ,
+      teamMembers: loadFromMockStorage("mock_team") ,
+      resourceAssignments: loadFromMockStorage("mock_asignments"),
       isLoading: true, // Inicialmente en true para la carga inicial
       error: null,
 
