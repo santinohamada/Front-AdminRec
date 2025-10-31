@@ -4,36 +4,41 @@ import { XIcon, EditIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Resource, ResourceAssignment, Task } from "@/lib/project-types";
 import { formatDate } from "@/lib/project-utils";
 import { motion } from "framer-motion";
+import { useProjectStore } from "@/store/projectStore";
+import type { Resource, ResourceAssignment, Task, UUID } from "@/lib/project-types";
+import { useMemo } from "react";
 
 interface ResourceAssignmentListProps {
-  resources: Resource[]; // recursos del proyecto (pueden venir filtrados por store)
-  assignments: ResourceAssignment[]; // asignaciones ya filtradas para el proyecto
-  tasks: Task[]; // tareas del proyecto
-  
-
+  projectId: UUID; // Recibimos el proyecto del cual queremos las asignaciones
 }
 
-export default function ResourceAssignmentList({
-  resources,
-  assignments,
-  tasks,
+export default function ResourceAssignmentList({ projectId }: ResourceAssignmentListProps) {
+  // Suscribirse al store
+  const tasks = useProjectStore((state) => state.tasks);
+  const assignments = useProjectStore((state) => state.resourceAssignments);
+  const resourcesAll = useProjectStore((state) => state.resources);
 
-}: ResourceAssignmentListProps) {
-  // Agrupamos asignaciones por recurso para mostrar por recurso
+  // Cachear el resultado de getResourcesByProject
+  const resources = useMemo(() => {
+    const projectTasks = tasks.filter((t) => t.project_id === projectId);
+    const taskIds = projectTasks.map((t) => t.id);
+    const projectAssignments = assignments.filter((a) => taskIds.includes(a.task_id));
+    const resourceIds = [...new Set(projectAssignments.map((a) => a.resource_id))];
+    return resourcesAll.filter((r) => resourceIds.includes(r.id));
+  }, [tasks, assignments, resourcesAll, projectId]);
+
+  // Agrupamos asignaciones por recurso
   const byResource = resources.map((res) => ({
     resource: res,
     assignments: assignments.filter((a) => a.resource_id === res.id),
   }));
-  console.log(byResource);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold">Asignaciones</h3>
-        
       </div>
 
       <motion.div
@@ -43,7 +48,10 @@ export default function ResourceAssignmentList({
         variants={{ visible: { transition: { staggerChildren: 0.03 } } }}
       >
         {byResource.map(({ resource, assignments: resAssignments }) => (
-          <motion.div key={resource.id} variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}>
+          <motion.div
+            key={resource.id}
+            variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
+          >
             <Card className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
@@ -52,12 +60,14 @@ export default function ResourceAssignmentList({
                     <Badge variant="outline">{resource.type}</Badge>
                   </div>
                   <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                    <span>Tarifa: <span className="font-medium">{resource.hourly_rate}</span>/h</span>
-                    <span>Disponible: <span className="font-medium">{resource.available_hours}h</span></span>
+                    <span>
+                      Tarifa: <span className="font-medium">{resource.hourly_rate}</span>/h
+                    </span>
+                    <span>
+                      Disponible: <span className="font-medium">{resource.available_hours}h</span>
+                    </span>
                   </div>
                 </div>
-
-                {/* no hay edición de recurso aquí; solo asignaciones */}
               </div>
 
               {resAssignments.length > 0 ? (
@@ -65,31 +75,39 @@ export default function ResourceAssignmentList({
                   {resAssignments.map((assignment) => {
                     const task = tasks.find((t) => t.id === assignment.task_id);
                     return (
-                      <div key={assignment.id} className="flex items-center justify-between bg-secondary/30 p-2 rounded">
+                      <div
+                        key={assignment.id}
+                        className="flex items-center justify-between bg-secondary/30 p-2 rounded"
+                      >
                         <div className="flex-1">
-                          <div className="text-foreground font-medium">{task?.name ?? "Tarea desconocida"}</div>
+                          <div className="text-foreground font-medium">
+                            {task?.name ?? "Tarea desconocida"}
+                          </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            <span className="mr-3">📅 {formatDate(assignment.start_date)} - {formatDate(assignment.end_date)}</span>
+                            <span className="mr-3">
+                              📅 {formatDate(assignment.start_date)} - {formatDate(assignment.end_date)}
+                            </span>
                             <span>{assignment.hours_assigned}h</span>
                           </div>
                         </div>
-
-                       
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground pt-3">Sin asignaciones para este recurso.</div>
+                <div className="text-sm text-muted-foreground pt-3">
+                  Sin asignaciones para este recurso.
+                </div>
               )}
             </Card>
           </motion.div>
         ))}
       </motion.div>
 
-      {/* Si no hay recursos listados */}
       {resources.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">No hay recursos en este proyecto.</div>
+        <div className="text-center py-12 text-muted-foreground">
+          No hay recursos en este proyecto.
+        </div>
       )}
     </div>
   );

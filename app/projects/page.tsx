@@ -1,29 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo } from "react"
-import { CheckCircle2Icon, BoxIcon, DollarSignIcon, UsersIcon } from "lucide-react"
+import { useState, useEffect, useMemo } from "react";
+import {
+  CheckCircle2Icon,
+  BoxIcon,
+  DollarSignIcon,
+  UsersIcon,
+  FolderKanbanIcon,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertDialogCustom } from "@/components/ui/alert-dialog-custom";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { TeamList } from "@/components/team-list";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
-// --- CAMBIOS DE IMPORTACIÓN ---
-// Eliminamos tu Modal personalizado
-// import { Modal } from "@/components/modal";
-// Agregamos los componentes de Dialog de Shadcn/UI
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-// --- FIN CAMBIOS DE IMPORTACIÓN ---
-
-import { TeamList } from "@/components/team-list"
-import { Button } from "@/components/ui/button"
-import { motion, AnimatePresence } from "framer-motion"
-
-import type { Task, ResourceAssignment, Project, UUID } from "@/lib/project-types"
-import { useProjectStore } from "@/store/projectStore"
-import { ProjectSkeleton } from "@/components/project/project-skeleton"
-import { ProjectList } from "@/components/project/project-list"
-import { ProjectHeader } from "@/components/project/project-header"
-import { TaskList } from "@/components/task/task-list"
-import ResourceAssignmentList from "@/components/resourceAssignment/resourceAssignment-list"
-import { BudgetOverview } from "@/components/budget-overview"
-import { ProjectForm } from "@/components/project/project-form"
-import { TaskForm } from "@/components/task/task-form"
+import type {
+  Task,
+  ResourceAssignment,
+  Project,
+  UUID,
+} from "@/lib/project-types";
+import { useProjectStore } from "@/store/projectStore";
+import { ProjectSkeleton } from "@/components/project/project-skeleton";
+import { ProjectList } from "@/components/project/project-list";
+import { ProjectHeader } from "@/components/project/project-header";
+import { TaskList } from "@/components/task/task-list";
+import ResourceAssignmentList from "@/components/resourceAssignment/resourceAssignment-list";
+import { BudgetOverview } from "@/components/budget-overview";
+import { ProjectForm } from "@/components/project/project-form";
+import { TaskForm } from "@/components/task/task-form";
 
 export default function ProjectManagementSystem() {
   const {
@@ -42,144 +53,171 @@ export default function ProjectManagementSystem() {
     deleteTask,
     error,
     deleteAssignment,
-    updateAssignment,
-    createAssignment,
     init,
     getResourcesByProject,
     getTeamMembersByProject,
-  } = useProjectStore()
+  } = useProjectStore();
+
+  const { dialogState, confirm, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
-    init()
-  }, [init])
+    init();
+  }, [init]);
 
   // UI state
-  const [selectedProjectId, setSelectedProjectId] = useState<UUID | null>(null)
-  const [activeTab, setActiveTab] = useState<"tasks" | "assignments" | "budget" | "team">("tasks")
-  const [taskFilter, setTaskFilter] = useState<"all" | "completed" | "in-progress">("all")
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<UUID | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "tasks" | "assignments" | "budget" | "team"
+  >("tasks");
+  const [taskFilter, setTaskFilter] = useState<
+    "all" | "completed" | "in-progress"
+  >("all");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Project modals / edit state
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
-  const [editingProject, setEditingProject] = useState<Project | undefined>()
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | undefined>();
 
   // Task modals / edit state
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
-  const [editingTask, setEditingTask] = useState<Task | undefined>()
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | undefined>();
 
-  // Assignment modal (create / edit ResourceAssignment)
-  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false)
-  const [editingAssignment, setEditingAssignment] = useState<ResourceAssignment | undefined>()
-
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
-
-  // (El resto de tus hooks y lógica permanecen igual... )
-  // Select first project when loaded
   useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
-      setSelectedProjectId(projects[0].id)
+      setSelectedProjectId(projects[0].id);
     }
-  }, [projects, selectedProjectId])
+  }, [projects, selectedProjectId]);
 
-  // Selectores derivados
-  const selectedProject = useMemo(() => projects.find((p) => p.id === selectedProjectId), [projects, selectedProjectId])
+  const selectedProject = useMemo(
+    () => projects.find((p) => p.id === selectedProjectId),
+    [projects, selectedProjectId]
+  );
 
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.project_id === selectedProjectId),
-    [tasks, selectedProjectId],
-  )
+    [tasks, selectedProjectId]
+  );
 
-  // Filtrar asignaciones pertenecientes al proyecto mediante task_id
-  const projectAssignments = resourceAssignments.filter((a) => projectTasks.some((t) => t.id === a.task_id))
-  
-  console.log(projectAssignments,selectedProject)
-  const isProjectClosed = selectedProject?.status === "closed"
+  const projectAssignments = resourceAssignments.filter((a) =>
+    projectTasks.some((t) => t.id === a.task_id)
+  );
+
+  const isProjectClosed = selectedProject?.status === "closed";
 
   const projectTeamMembers = useMemo(() => {
-    if (!selectedProjectId) return []
-    return getTeamMembersByProject(selectedProjectId)
-  }, [selectedProjectId, getTeamMembersByProject])
+    if (!selectedProjectId) return [];
+    return getTeamMembersByProject(selectedProjectId);
+  }, [selectedProjectId, getTeamMembersByProject]);
 
   const projectResources = useMemo(() => {
-    if (!selectedProjectId) return []
-    return getResourcesByProject(selectedProjectId)
-  }, [selectedProjectId, getResourcesByProject])
+    if (!selectedProjectId) return [];
+    return getResourcesByProject(selectedProjectId);
+  }, [selectedProjectId, getResourcesByProject]);
 
-  // --- Handlers ---
-
-  const handleSaveProject = async (projectData: Omit<Project, "id"> | Project) => {
+  const handleSaveProject = async (
+    projectData: Omit<Project, "id"> | Project
+  ) => {
     const savedProject = await ("id" in projectData
       ? updateProject(projectData as Project)
-      : createProject(projectData))
+      : createProject(projectData));
     if (savedProject) {
-      if (!("id" in projectData)) setSelectedProjectId(savedProject.id)
-      setIsProjectModalOpen(false)
-      setEditingProject(undefined)
+      if (!("id" in projectData)) setSelectedProjectId(savedProject.id);
+      setIsProjectModalOpen(false);
+      setEditingProject(undefined);
     }
-  }
+  };
 
   const handleDeleteProject = async () => {
-    if (!selectedProject) return
-    if (
-      confirm(
-        `¿Estás seguro de que quieres eliminar "${selectedProject.name}"? Esto también eliminará tareas y asignaciones.`,
-      )
-    ) {
-      const oldProjects = projects.filter((p) => p.id !== selectedProject.id)
-      await deleteProject(selectedProject.id)
-      if (oldProjects.length > 0) setSelectedProjectId(oldProjects[0].id)
-      else setSelectedProjectId(null)
-    }
-  }
+    if (!selectedProject) return;
+    const confirmed = await confirm({
+      title: "Eliminar Proyecto",
+      description: `¿Estás seguro de que quieres eliminar "${selectedProject.name}"? Esto también eliminará tareas y asignaciones.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
 
-  const handleToggleProjectClosed = () => {
-    if (!selectedProject) return
-    const action = selectedProject.status === "closed" ? "reabrir" : "cerrar"
-    if (confirm(`¿Estás seguro de que quieres ${action} este proyecto?`)) {
-      toggleProjectStatus(selectedProject)
+    if (confirmed) {
+      const oldProjects = projects.filter((p) => p.id !== selectedProject.id);
+      await deleteProject(selectedProject.id);
+      if (oldProjects.length > 0) setSelectedProjectId(oldProjects[0].id);
+      else setSelectedProjectId(null);
     }
-  }
+  };
+
+  const handleToggleProjectClosed = async () => {
+    if (!selectedProject) return;
+    const action = selectedProject.status === "closed" ? "reabrir" : "cerrar";
+    const confirmed = await confirm({
+      title: `${action.charAt(0).toUpperCase() + action.slice(1)} Proyecto`,
+      description: `¿Estás seguro de que quieres ${action} este proyecto?`,
+      confirmText: action.charAt(0).toUpperCase() + action.slice(1),
+      cancelText: "Cancelar",
+    });
+
+    if (confirmed) {
+      toggleProjectStatus(selectedProject);
+    }
+  };
 
   const handleSaveTask = async (
     taskData: Omit<Task, "id"> | Task,
-    resourceAssignments?: Omit<ResourceAssignment, "id" | "task_id">[],
+    resourceAssignments?: Omit<ResourceAssignment, "id" | "task_id">[]
   ) => {
-    const dataToSave = { ...taskData, project_id: taskData.project_id || selectedProjectId }
+    const dataToSave = {
+      ...taskData,
+      project_id: taskData.project_id || selectedProjectId,
+    };
     const savedTask = await ("id" in dataToSave
       ? updateTask(dataToSave as Task, resourceAssignments || [])
-      : createTask(dataToSave as Task, resourceAssignments || []))
+      : createTask(dataToSave as Task, resourceAssignments || []));
     if (savedTask) {
-      setIsTaskModalOpen(false)
-      setEditingTask(undefined)
+      setIsTaskModalOpen(false);
+      setEditingTask(undefined);
     }
-  }
+  };
 
-  const handleDeleteTask = (taskId: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
-      deleteTask(taskId)
-    }
-  }
+  const handleDeleteTask = async (taskId: string) => {
+    const confirmed = await confirm({
+      title: "Eliminar Tarea",
+      description: "¿Estás seguro de que quieres eliminar esta tarea?",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
 
-  const handleRemoveAssignment = (assignmentId: string) => {
-    if (confirm("¿Eliminar esta asignación de recurso?")) {
-      deleteAssignment(assignmentId)
+    if (confirmed) {
+      deleteTask(taskId);
     }
-  }
+  };
+
+  const handleRemoveAssignment = async (assignmentId: string) => {
+    const confirmed = await confirm({
+      title: "Eliminar Asignación",
+      description: "¿Eliminar esta asignación de recurso?",
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    });
+
+    if (confirmed) {
+      deleteAssignment(assignmentId);
+    }
+  };
 
   const handleSelectProject = (projectId: string) => {
-    setSelectedProjectId(projectId)
-    setIsMobileSidebarOpen(false)
-  }
+    setSelectedProjectId(projectId);
+    setIsMobileSidebarOpen(false);
+  };
 
-  // --- renderizado principal ---
-  if (isLoading) return <ProjectSkeleton />
+  if (isLoading) return <ProjectSkeleton />;
 
   if (error) {
     return (
       <div className="min-h-screen bg-background text-destructive flex items-center justify-center">
         Error: {error.message}
       </div>
-    )
+    );
   }
 
   if (!selectedProject) {
@@ -190,43 +228,44 @@ export default function ProjectManagementSystem() {
         </p>
         <Button
           onClick={() => {
-            setEditingProject(undefined)
-            setIsProjectModalOpen(true)
+            setEditingProject(undefined);
+            setIsProjectModalOpen(true);
           }}
         >
           Crear un Proyecto
         </Button>
-        {/* Aquí también usamos el Dialog para el primer proyecto */}
         <Dialog
           open={isProjectModalOpen}
           onOpenChange={(isOpen) => {
             if (!isOpen) {
-              setIsProjectModalOpen(false)
-              setEditingProject(undefined)
+              setIsProjectModalOpen(false);
+              setEditingProject(undefined);
             }
           }}
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingProject ? "Editar Proyecto" : "Crear Nuevo Proyecto"}</DialogTitle>
+              <DialogTitle>
+                {editingProject ? "Editar Proyecto" : "Crear Nuevo Proyecto"}
+              </DialogTitle>
             </DialogHeader>
             <ProjectForm
               project={editingProject}
               teamMembers={allTeamMembers}
               onSave={handleSaveProject}
               onCancel={() => {
-                setIsProjectModalOpen(false)
-                setEditingProject(undefined)
+                setIsProjectModalOpen(false);
+                setEditingProject(undefined);
               }}
             />
           </DialogContent>
         </Dialog>
       </div>
-    )
+    );
   }
 
   return (
-    <div className=" text-foreground">
+    <div className="text-foreground">
       <div className="flex h-[calc(100vh-73px)] md:h-[calc(100vh-89px)] relative">
         <AnimatePresence>
           {isMobileSidebarOpen && (
@@ -241,7 +280,11 @@ export default function ProjectManagementSystem() {
         </AnimatePresence>
 
         <div
-          className={`fixed md:relative inset-y-0 left-0 z-50 md:z-0 transform transition-transform duration-300 ease-in-out ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+          className={`fixed md:relative inset-y-0 left-0 z-50 md:z-0 transform transition-transform duration-300 ease-in-out ${
+            isMobileSidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-full md:translate-x-0"
+          }`}
         >
           <ProjectList
             projects={projects}
@@ -249,9 +292,9 @@ export default function ProjectManagementSystem() {
             selectedProjectId={selectedProjectId || projects[0]?.id}
             onSelectProject={handleSelectProject}
             onAddProject={() => {
-              setEditingProject(undefined)
-              setIsProjectModalOpen(true)
-              setIsMobileSidebarOpen(false)
+              setEditingProject(undefined);
+              setIsProjectModalOpen(true);
+              setIsMobileSidebarOpen(false);
             }}
           />
         </div>
@@ -262,8 +305,8 @@ export default function ProjectManagementSystem() {
               project={selectedProject}
               teamMembers={allTeamMembers}
               onEdit={() => {
-                setEditingProject(selectedProject)
-                setIsProjectModalOpen(true)
+                setEditingProject(selectedProject);
+                setIsProjectModalOpen(true);
               }}
               onDelete={handleDeleteProject}
               onToggleClosed={handleToggleProjectClosed}
@@ -277,17 +320,21 @@ export default function ProjectManagementSystem() {
                   { id: "budget", label: "Presupuesto", icon: DollarSignIcon },
                   { id: "team", label: "Equipo", icon: UsersIcon },
                 ].map((tab) => {
-                  const Icon = tab.icon
+                  const Icon = tab.icon;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${activeTab === tab.id ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                      className={`flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${
+                        activeTab === tab.id
+                          ? "border-primary text-foreground font-medium"
+                          : "border-transparent text-muted-foreground hover:text-foreground"
+                      }`}
                     >
                       <Icon className="h-4 w-4" />
                       <span className="hidden sm:inline">{tab.label}</span>
                     </button>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -300,12 +347,12 @@ export default function ProjectManagementSystem() {
                 filter={taskFilter}
                 onFilterChange={setTaskFilter}
                 onAddTask={() => {
-                  setEditingTask(undefined)
-                  setIsTaskModalOpen(true)
+                  setEditingTask(undefined);
+                  setIsTaskModalOpen(true);
                 }}
                 onEditTask={(task) => {
-                  setEditingTask(task)
-                  setIsTaskModalOpen(true)
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
                 }}
                 onDeleteTask={handleDeleteTask}
                 isProjectClosed={isProjectClosed}
@@ -314,11 +361,8 @@ export default function ProjectManagementSystem() {
 
             {activeTab === "assignments" && (
               <ResourceAssignmentList
-              key={selectedProjectId}
-                resources={projectResources}
-                assignments={projectAssignments}
-                tasks={projectTasks}
-              
+                key={selectedProjectId}
+                projectId={selectedProjectId || projects[0]?.id}
               />
             )}
 
@@ -331,52 +375,66 @@ export default function ProjectManagementSystem() {
               />
             )}
 
-            {activeTab === "team" && <TeamList teamMembers={projectTeamMembers} tasks={projectTasks} />}
+            {activeTab === "team" && (
+              <TeamList teamMembers={projectTeamMembers} tasks={projectTasks} />
+            )}
           </div>
         </main>
+
+        <motion.button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        >
+          <FolderKanbanIcon className="h-6 w-6" />
+        </motion.button>
       </div>
 
-      {/* --- MODALES ACTUALIZADOS CON SHADCN/UI --- */}
-
-      {/* 1. Modal de Proyecto */}
       <Dialog
         open={isProjectModalOpen}
         onOpenChange={(isOpen) => {
-          setIsProjectModalOpen(isOpen)
+          setIsProjectModalOpen(isOpen);
           if (!isOpen) {
-            setEditingProject(undefined)
+            setEditingProject(undefined);
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingProject ? "Editar Proyecto" : "Crear Nuevo Proyecto"}</DialogTitle>
+            <DialogTitle>
+              {editingProject ? "Editar Proyecto" : "Crear Nuevo Proyecto"}
+            </DialogTitle>
           </DialogHeader>
           <ProjectForm
             project={editingProject}
             teamMembers={allTeamMembers}
             onSave={handleSaveProject}
             onCancel={() => {
-              setIsProjectModalOpen(false)
-              setEditingProject(undefined)
+              setIsProjectModalOpen(false);
+              setEditingProject(undefined);
             }}
           />
         </DialogContent>
       </Dialog>
 
-      {/* 2. Modal de Tarea */}
       <Dialog
         open={isTaskModalOpen}
         onOpenChange={(isOpen) => {
-          setIsTaskModalOpen(isOpen)
+          setIsTaskModalOpen(isOpen);
           if (!isOpen) {
-            setEditingTask(undefined)
+            setEditingTask(undefined);
           }
         }}
       >
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>{editingTask ? "Editar Tarea" : "Crear Nueva Tarea"}</DialogTitle>
+            <DialogTitle>
+              {editingTask ? "Editar Tarea" : "Crear Nueva Tarea"}
+            </DialogTitle>
           </DialogHeader>
           <TaskForm
             task={editingTask}
@@ -388,12 +446,23 @@ export default function ProjectManagementSystem() {
             tasks={tasks}
             onSave={handleSaveTask}
             onCancel={() => {
-              setIsTaskModalOpen(false)
-              setEditingTask(undefined)
+              setIsTaskModalOpen(false);
+              setEditingTask(undefined);
             }}
           />
         </DialogContent>
       </Dialog>
+
+      <AlertDialogCustom
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={dialogState.onConfirm}
+        title={dialogState.title}
+        description={dialogState.description}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+      />
     </div>
-  )
+  );
 }

@@ -339,30 +339,3 @@ export const validateProjectBudget = (
  * @param currentAssignmentId ID de la asignación que se está modificando (opcional).
  * @returns Objeto de validación con las horas restantes.
  */
-export const validateResourceHours = (
-  resourceId: UUID,
-  resource: Resource,
-  assignments: ResourceAssignment[],
-  newHours: number,
-  currentAssignmentId?: UUID
-): { valid: boolean; error?: string; remaining: number } => {
-  // RN-06: Resources cannot exceed their available hours
-  const otherAssignmentsHours = assignments
-    .filter((a) => a.resource_id === resourceId && a.id !== currentAssignmentId)
-    .reduce((sum, a) => sum + a.hours_assigned, 0);
-
-  const totalAssigned = otherAssignmentsHours + newHours;
-  const remaining = resource.available_hours - totalAssigned;
-
-  if (totalAssigned > resource.available_hours) {
-    return {
-      valid: false,
-      error: `Las horas asignadas (${totalAssigned}h) exceden las horas disponibles del recurso (${resource.available_hours}h). Exceso: ${Math.abs(
-        remaining
-      )}h`,
-      remaining,
-    };
-  }
-
-  return { valid: true, remaining };
-};

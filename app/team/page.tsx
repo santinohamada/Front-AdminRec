@@ -5,7 +5,9 @@ import { useProjectStore } from "@/store/projectStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Modal } from "@/components/modal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialogCustom } from "@/components/ui/alert-dialog-custom"
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
 import { TeamMemberForm } from "@/components/team/team-member-form"
 import { PlusIcon, SearchIcon, UsersIcon, BriefcaseIcon, MailIcon, PhoneIcon, MapPinIcon } from "lucide-react"
 import { motion } from "framer-motion"
@@ -14,6 +16,8 @@ import type { TeamMember } from "@/lib/project-types"
 export default function TeamPage() {
   const { teamMembers, tasks, createTeamMember, updateTeamMember, deleteTeamMember, getTeamMemberWorkload } =
     useProjectStore()
+
+  const { dialogState, confirm, closeDialog } = useConfirmDialog()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
@@ -59,17 +63,25 @@ export default function TeamPage() {
     const memberTasks = tasks.filter((t) => t.assignee_id === member.id)
 
     if (memberTasks.length > 0) {
-      if (
-        !confirm(
-          `${member.name} tiene ${memberTasks.length} tarea(s) asignada(s). ¿Estás seguro de que quieres eliminar este miembro? Las tareas quedarán sin asignar.`,
-        )
-      ) {
-        return
-      }
+      const confirmed = await confirm({
+        title: "Eliminar Miembro del Equipo",
+        description: `${member.name} tiene ${memberTasks.length} tarea(s) asignada(s). ¿Estás seguro de que quieres eliminar este miembro? Las tareas quedarán sin asignar.`,
+        confirmText: "Eliminar",
+        cancelText: "Cancelar",
+        variant: "destructive",
+      })
+
+      if (!confirmed) return
     } else {
-      if (!confirm(`¿Estás seguro de que quieres eliminar a ${member.name}?`)) {
-        return
-      }
+      const confirmed = await confirm({
+        title: "Eliminar Miembro del Equipo",
+        description: `¿Estás seguro de que quieres eliminar a ${member.name}?`,
+        confirmText: "Eliminar",
+        cancelText: "Cancelar",
+        variant: "destructive",
+      })
+
+      if (!confirmed) return
     }
 
     await deleteTeamMember(member.id)
@@ -86,7 +98,6 @@ export default function TeamPage() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Equipo</h1>
@@ -98,7 +109,6 @@ export default function TeamPage() {
           </Button>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
@@ -137,7 +147,6 @@ export default function TeamPage() {
           </Card>
         </div>
 
-        {/* Search */}
         <Card className="p-4">
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -150,7 +159,6 @@ export default function TeamPage() {
           </div>
         </Card>
 
-        {/* Team Members Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMembers.map((member) => {
             const taskCount = getMemberTaskCount(member.id)
@@ -166,7 +174,6 @@ export default function TeamPage() {
               >
                 <Card className="p-5 hover:shadow-lg transition-shadow">
                   <div className="space-y-4">
-                    {/* Avatar and Name */}
                     <div className="flex items-start gap-3">
                       <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg shrink-0">
                         {member.name
@@ -182,7 +189,6 @@ export default function TeamPage() {
                       </div>
                     </div>
 
-                    {/* Contact Info */}
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MailIcon className="w-4 h-4 shrink-0" />
@@ -200,7 +206,6 @@ export default function TeamPage() {
                       )}
                     </div>
 
-                    {/* Task Stats */}
                     <div className="pt-3 border-t space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Tareas asignadas:</span>
@@ -218,7 +223,6 @@ export default function TeamPage() {
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
                     {taskCount > 0 && (
                       <div className="space-y-1">
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -230,7 +234,6 @@ export default function TeamPage() {
                       </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex gap-2 pt-2">
                       <Button variant="outline" size="sm" onClick={() => handleEditMember(member)} className="flex-1">
                         Editar
@@ -268,24 +271,40 @@ export default function TeamPage() {
         )}
       </div>
 
-      {/* Team Member Form Modal */}
-      <Modal
-        isOpen={isTeamModalOpen}
-        onClose={() => {
-          setIsTeamModalOpen(false)
-          setEditingMember(undefined)
-        }}
-        title={editingMember ? "Editar Miembro" : "Nuevo Miembro"}
-      >
-        <TeamMemberForm
-          member={editingMember}
-          onSave={handleSaveMember}
-          onCancel={() => {
-            setIsTeamModalOpen(false)
+      <Dialog
+        open={isTeamModalOpen}
+        onOpenChange={(isOpen) => {
+          setIsTeamModalOpen(isOpen)
+          if (!isOpen) {
             setEditingMember(undefined)
-          }}
-        />
-      </Modal>
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingMember ? "Editar Miembro" : "Nuevo Miembro"}</DialogTitle>
+          </DialogHeader>
+          <TeamMemberForm
+            member={editingMember}
+            onSave={handleSaveMember}
+            onCancel={() => {
+              setIsTeamModalOpen(false)
+              setEditingMember(undefined)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialogCustom
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={dialogState.onConfirm}
+        title={dialogState.title}
+        description={dialogState.description}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+      />
     </div>
   )
 }

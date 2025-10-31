@@ -6,14 +6,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Modal } from "@/components/modal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialogCustom } from "@/components/ui/alert-dialog-custom"
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog"
 import { ResourceForm } from "@/components/resource/resource-form"
 import { PlusIcon, SearchIcon, PackageIcon, TrendingUpIcon, ClockIcon, DollarSignIcon } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Resource } from "@/lib/project-types"
 
 export default function ResourcesPage() {
-  const { resources, createResource, updateResource, deleteResource, getResourceUtilization } = useProjectStore()
+  const { resources, createResource, updateResource, deleteResource } = useProjectStore()
+  console.log(resources)
+  const { dialogState, confirm, closeDialog } = useConfirmDialog()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<"all" | "human" | "software" | "infrastructure">("all")
@@ -30,16 +34,20 @@ export default function ResourcesPage() {
 
   const stats = useMemo(() => {
     const totalResources = resources.length
-    const totalHours = resources.reduce((sum, r) => sum + r.available_hours, 0)
+    const totalHours = resources.reduce((sum, r) => sum + (r.available_hours ?? 0), 0)
     const avgUtilization =
-      resources.length > 0 ? resources.reduce((sum, r) => sum + getResourceUtilization(r.id), 0) / resources.length : 0
-    const totalValue = resources.reduce((sum, r) => sum + r.hourly_rate * r.available_hours, 0)
-
+      resources.length > 0
+        ? resources.reduce((sum, r) => sum + (r.assigned_hours ?? 0) / (r.total_hours ?? 0) * 100 , 0) / resources.length
+        : 0
+    const totalValue = resources.reduce((sum, r) => sum + (r.hourly_rate ?? 0) * (r.available_hours ?? 0), 0)
+    
     return { totalResources, totalHours, avgUtilization, totalValue }
-  }, [resources, getResourceUtilization])
+  }, [resources])
 
   const handleSaveResource = async (resourceData: Omit<Resource, "id"> | Resource) => {
-    const saved = await ("id" in resourceData ? updateResource(resourceData as Resource) : createResource(resourceData))
+    // detectar si es update o create
+    const isUpdate = (resourceData as Resource).id !== undefined && (resourceData as Resource).id !== null
+    const saved = isUpdate ? await updateResource(resourceData as Resource) : await createResource(resourceData as Omit<Resource, "id">)
 
     if (saved) {
       setIsResourceModalOpen(false)
@@ -53,33 +61,40 @@ export default function ResourcesPage() {
   }
 
   const handleDeleteResource = async (resource: Resource) => {
-    if (confirm(`¿Estás seguro de que quieres eliminar "${resource.name}"?`)) {
+    const confirmed = await confirm({
+      title: "Eliminar Recurso",
+      description: `¿Estás seguro de que quieres eliminar "${resource.name}"?`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+      variant: "destructive",
+    })
+
+    if (confirmed) {
       await deleteResource(resource.id)
     }
   }
 
   const getTypeLabel = (type: string) => {
-    const labels = {
+    const labels: Record<string, string> = {
       human: "Humano",
-      material: "Software",
+      software: "Software",
       infrastructure: "Infraestructura",
     }
-    return labels[type as keyof typeof labels] || type
+    return labels[type] || type
   }
 
   const getTypeColor = (type: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       human: "bg-blue-100 text-blue-800",
-      material: "bg-green-100 text-green-800",
+      software: "bg-green-100 text-green-800",
       infrastructure: "bg-purple-100 text-purple-800",
     }
-    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[type] || "bg-gray-100 text-gray-800"
   }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Recursos</h1>
@@ -91,7 +106,6 @@ export default function ResourcesPage() {
           </Button>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
@@ -112,7 +126,7 @@ export default function ResourcesPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Horas Disponibles</p>
-                <p className="text-2xl font-bold">{stats.totalHours.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{stats.totalHours.toLocaleString()}h</p>
               </div>
             </div>
           </Card>
@@ -142,55 +156,54 @@ export default function ResourcesPage() {
           </Card>
         </div>
 
-        {/* Filters */}
         <Card className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar recursos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filterType === "all" ? "default" : "outline"}
-                onClick={() => setFilterType("all")}
-                size="sm"
-              >
-                Todos
-              </Button>
-              <Button
-                variant={filterType === "human" ? "default" : "outline"}
-                onClick={() => setFilterType("human")}
-                size="sm"
-              >
-                Humanos
-              </Button>
-              <Button
-                variant={filterType === "software" ? "default" : "outline"}
-                onClick={() => setFilterType("software")}
-                size="sm"
-              >
-                Software
-              </Button>
-              <Button
-                variant={filterType === "infrastructure" ? "default" : "outline"}
-                onClick={() => setFilterType("infrastructure")}
-                size="sm"
-              >
-                Infraestructura
-              </Button>
-            </div>
-          </div>
+        <div className="flex flex-col md:flex-row md:flex-nowrap flex-wrap gap-4">
+  <div className="flex-1 relative">
+    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+    <Input
+      placeholder="Buscar recursos..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="pl-10"
+    />
+  </div>
+  <div className="flex flex-wrap gap-2">
+    <Button
+      variant={filterType === "all" ? "default" : "outline"}
+      onClick={() => setFilterType("all")}
+      size="sm"
+    >
+      Todos
+    </Button>
+    <Button
+      variant={filterType === "human" ? "default" : "outline"}
+      onClick={() => setFilterType("human")}
+      size="sm"
+    >
+      Humanos
+    </Button>
+    <Button
+      variant={filterType === "software" ? "default" : "outline"}
+      onClick={() => setFilterType("software")}
+      size="sm"
+    >
+      Software
+    </Button>
+    <Button
+      variant={filterType === "infrastructure" ? "default" : "outline"}
+      onClick={() => setFilterType("infrastructure")}
+      size="sm"
+    >
+      Infraestructura
+    </Button>
+  </div>
+</div>
+
         </Card>
 
-        {/* Resources Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredResources.map((resource) => {
-            const utilization = getResourceUtilization(resource.id)
+            const utilization =  (resource.assigned_hours ?? 0) / (resource.total_hours ?? 0) * 100 ?? 0
             return (
               <motion.div
                 key={resource.id}
@@ -203,7 +216,9 @@ export default function ResourcesPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{resource.name}</h3>
-                        <Badge className={`mt-1 ${getTypeColor(resource.type)}`}>{getTypeLabel(resource.type)}</Badge>
+                        <Badge className={`mt-1 ${getTypeColor(resource.type)}`}>
+                          {getTypeLabel(resource.type)}
+                        </Badge>
                       </div>
                     </div>
 
@@ -222,7 +237,6 @@ export default function ResourcesPage() {
                       </div>
                     </div>
 
-                    {/* Utilization Bar */}
                     <div className="space-y-1">
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
@@ -278,24 +292,40 @@ export default function ResourcesPage() {
         )}
       </div>
 
-      {/* Resource Form Modal */}
-      <Modal
-        isOpen={isResourceModalOpen}
-        onClose={() => {
-          setIsResourceModalOpen(false)
-          setEditingResource(undefined)
-        }}
-        title={editingResource ? "Editar Recurso" : "Nuevo Recurso"}
-      >
-        <ResourceForm
-          resource={editingResource}
-          onSave={handleSaveResource}
-          onCancel={() => {
-            setIsResourceModalOpen(false)
+      <Dialog
+        open={isResourceModalOpen}
+        onOpenChange={(isOpen) => {
+          setIsResourceModalOpen(isOpen)
+          if (!isOpen) {
             setEditingResource(undefined)
-          }}
-        />
-      </Modal>
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingResource ? "Editar Recurso" : "Nuevo Recurso"}</DialogTitle>
+          </DialogHeader>
+          <ResourceForm
+            resource={editingResource}
+            onSave={handleSaveResource}
+            onCancel={() => {
+              setIsResourceModalOpen(false)
+              setEditingResource(undefined)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialogCustom
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={dialogState.onConfirm}
+        title={dialogState.title}
+        description={dialogState.description}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+      />
     </div>
   )
 }

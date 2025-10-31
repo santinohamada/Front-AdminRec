@@ -41,35 +41,37 @@ export function TaskList({
 
   return (
     <div>
-      <motion.div
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="flex gap-2 ">
-          <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => onFilterChange("all")}>
-            Todas ({tasks.length})
-          </Button>
-          <Button
-            variant={filter === "in-progress" ? "default" : "outline"}
-            size="sm"
-            onClick={() => onFilterChange("in-progress")}
-          >
-            En Progreso ({inProgressCount})
-          </Button>
-          <Button
-            variant={filter === "completed" ? "default" : "outline"}
-            size="sm"
-            onClick={() => onFilterChange("completed")}
-          >
-            Completadas ({completedCount})
-          </Button>
-        </div>
-        <Button onClick={onAddTask} disabled={isProjectClosed}>
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Agregar Tarea
-        </Button>
-      </motion.div>
+     <motion.div
+  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6"
+  initial={{ opacity: 0, y: -10 }}
+  animate={{ opacity: 1, y: 0 }}
+>
+  <div className="flex flex-wrap gap-2">
+    <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => onFilterChange("all")}>
+      Todas ({tasks.length})
+    </Button>
+    <Button
+      variant={filter === "in-progress" ? "default" : "outline"}
+      size="sm"
+      onClick={() => onFilterChange("in-progress")}
+    >
+      En Progreso ({inProgressCount})
+    </Button>
+    <Button
+      variant={filter === "completed" ? "default" : "outline"}
+      size="sm"
+      onClick={() => onFilterChange("completed")}
+    >
+      Completadas ({completedCount})
+    </Button>
+  </div>
+
+  <Button onClick={onAddTask} disabled={isProjectClosed}>
+    <PlusIcon className="h-4 w-4 mr-2" />
+    Agregar Tarea
+  </Button>
+</motion.div>
+
 
       <AnimatePresence mode="popLayout">
         <motion.div
