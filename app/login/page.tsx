@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation"; // Importar useSearchParams
+import { useRouter } from "next/navigation"; // Importar useSearchParams
 import { LogInIcon, AlertCircleIcon } from "lucide-react"; // Para el error
 
 // 1. Importar el store de autenticación
@@ -24,7 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"; // Para el erro
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // Para la redirección
+
   const { login } = useAuthStore();
 
   // --- CAMBIO: Nuevos estados para email, password y error ---
