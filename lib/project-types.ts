@@ -9,7 +9,8 @@ export interface TeamMember {
   dni: string;
   phone: string;
   email: string;
-  domicilio:string
+  domicilio:string;
+  password:string
 }
 
 // Resuelta la referencia circular: Manager tiene project_ids

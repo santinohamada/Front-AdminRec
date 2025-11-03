@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   CheckCircle2Icon,
   BoxIcon,
@@ -16,55 +16,49 @@ import {
 } from "@/components/ui/dialog";
 import { AlertDialogCustom } from "@/components/ui/alert-dialog-custom";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
-import { TeamList } from "@/components/team-list";
-import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-
-import type {
-  Task,
-  ResourceAssignment,
-  Project,
-  UUID,
-} from "@/lib/project-types";
-import { useProjectStore } from "@/store/projectStore";
-import { ProjectSkeleton } from "@/components/project/project-skeleton";
 import { ProjectList } from "@/components/project/project-list";
 import { ProjectHeader } from "@/components/project/project-header";
 import { TaskList } from "@/components/task/task-list";
 import ResourceAssignmentList from "@/components/resourceAssignment/resourceAssignment-list";
 import { BudgetOverview } from "@/components/budget-overview";
+import { TeamList } from "@/components/team-list";
 import { ProjectForm } from "@/components/project/project-form";
 import { TaskForm } from "@/components/task/task-form";
+import { ProjectSkeleton } from "@/components/project/project-skeleton";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Hooks de React Query (como los definiste)
+import {
+  useProjects,
+  useCreateProject,
+  useUpdateProject,
+  useDeleteProject,
+} from "@/hooks/useProjects"; // (ruta de ejemplo)
+import {
+  useTasks,
+  useCreateTask,
+  useUpdateTask,
+  useDeleteTask,
+} from "@/hooks/useTasks"; // (ruta de ejemplo)
+import { useResources } from "@/hooks/useResources"; // (ruta de ejemplo)
+import { useTeam } from "@/hooks/useTeam"; // (ruta de ejemplo)
+import { useAssignments } from "@/hooks/useAssignments"; // (ruta de ejemplo)
+
+import type {
+  Project,
+  Task,
+  ResourceAssignment,
+  UUID,
+  NewProject,
+  NewTask,
+  NewResourceAssignment, // Importado para el casteo en handleSaveTask
+} from "@/lib/project-types";
 
 export default function ProjectManagementSystem() {
-  const {
-    projects,
-    tasks,
-    resources,
-    teamMembers: allTeamMembers,
-    resourceAssignments,
-    isLoading,
-    createProject,
-    updateProject,
-    deleteProject,
-    toggleProjectStatus,
-    createTask,
-    updateTask,
-    deleteTask,
-    error,
-    deleteAssignment,
-    init,
-    getResourcesByProject,
-    getTeamMembersByProject,
-  } = useProjectStore();
-
   const { dialogState, confirm, closeDialog } = useConfirmDialog();
 
-  useEffect(() => {
-    init();
-  }, [init]);
-
-  // UI state
+  // --- UI State ---
   const [selectedProjectId, setSelectedProjectId] = useState<UUID | null>(null);
   const [activeTab, setActiveTab] = useState<
     "tasks" | "assignments" | "budget" | "team"
@@ -73,58 +67,113 @@ export default function ProjectManagementSystem() {
     "all" | "completed" | "in-progress"
   >("all");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
-  // Project modals / edit state
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | undefined>();
-
-  // Task modals / edit state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
 
+  // --- Queries (Usando Hooks) ---
+  const {
+    data: projects = [],
+    isLoading: loadingProjects,
+    error: projectsError,
+  } = useProjects();
+  const { data: tasks = [], isLoading: loadingTasks } = useTasks();
+  const { data: resources = [] } = useResources();
+  const { data: teamMembers = [] } = useTeam();
+  const { data: resourceAssignments = [] } = useAssignments();
+
+  // --- Mutations (Usando Hooks) ---
+  const createProjectMutation = useCreateProject();
+  const updateProjectMutation = useUpdateProject();
+  const deleteProjectMutation = useDeleteProject();
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+
+  // --- Estado Derivado (LÓGICA CORREGIDA) ---
+
+  // 1. Selecciona el primer proyecto por defecto
   useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
       setSelectedProjectId(projects[0].id);
     }
   }, [projects, selectedProjectId]);
 
+  // 2. Encuentra el proyecto seleccionado
   const selectedProject = useMemo(
     () => projects.find((p) => p.id === selectedProjectId),
     [projects, selectedProjectId]
   );
 
+  // 3. Filtra las tareas del proyecto seleccionado
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.project_id === selectedProjectId),
     [tasks, selectedProjectId]
   );
 
-  const projectAssignments = resourceAssignments.filter((a) =>
-    projectTasks.some((t) => t.id === a.task_id)
+  // 4. Filtra las asignaciones de recursos de esas tareas
+  const projectAssignments = useMemo(
+    () =>
+      resourceAssignments.filter((a) =>
+        projectTasks.some((t) => t.id === a.task_id)
+      ),
+    [resourceAssignments, projectTasks] // Depende de projectTasks
   );
 
+  // 5. (CORREGIDO) Encuentra los miembros del equipo del proyecto
+  const projectTeamMembers = useMemo(() => {
+    if (!selectedProject) return [];
+
+    // Obtiene los IDs de los asignados a las tareas
+    const taskAssigneeIds = new Set(projectTasks.map((t) => t.assignee_id));
+    
+    // Añade el ID del manager del proyecto
+    const managerId = selectedProject.manager_id;
+    if (managerId) {
+      taskAssigneeIds.add(managerId);
+    }
+
+    // Filtra la lista completa de miembros del equipo
+    return teamMembers.filter((tm) => taskAssigneeIds.has(tm.id));
+  }, [teamMembers, projectTasks, selectedProject]);
+
+  // 6. (CORREGIDO) Encuentra los recursos del proyecto
+  const projectResources = useMemo(() => {
+    // Obtiene los IDs de los recursos desde las asignaciones del proyecto
+    const projectResourceIds = new Set(
+      projectAssignments.map((a) => a.resource_id)
+    );
+
+    // Filtra la lista completa de recursos
+    return resources.filter((r) => projectResourceIds.has(r.id));
+  }, [resources, projectAssignments]); // Depende de projectAssignments
+
+  // 7. Estado del proyecto
   const isProjectClosed = selectedProject?.status === "closed";
 
-  const projectTeamMembers = useMemo(() => {
-    if (!selectedProjectId) return [];
-    return getTeamMembersByProject(selectedProjectId);
-  }, [selectedProjectId, getTeamMembersByProject]);
 
-  const projectResources = useMemo(() => {
-    if (!selectedProjectId) return [];
-    return getResourcesByProject(selectedProjectId);
-  }, [selectedProjectId, getResourcesByProject]);
+  // --- Handlers (Ajustados para los hooks) ---
+  const handleSelectProject = (projectId: UUID) => {
+    setSelectedProjectId(projectId);
+    setIsMobileSidebarOpen(false);
+  };
 
   const handleSaveProject = async (
     projectData: Omit<Project, "id"> | Project
   ) => {
-    const savedProject = await ("id" in projectData
-      ? updateProject(projectData as Project)
-      : createProject(projectData));
-    if (savedProject) {
-      if (!("id" in projectData)) setSelectedProjectId(savedProject.id);
-      setIsProjectModalOpen(false);
-      setEditingProject(undefined);
+    if ("id" in projectData) {
+      await updateProjectMutation.mutateAsync(projectData);
+    } else {
+      await createProjectMutation.mutateAsync(projectData as NewProject, {
+        onSuccess: (newProject) => {
+          // onSuccess específico aquí para actualizar la UI local
+          setSelectedProjectId(newProject.id);
+        },
+      });
     }
+    setIsProjectModalOpen(false);
+    setEditingProject(undefined);
   };
 
   const handleDeleteProject = async () => {
@@ -136,18 +185,22 @@ export default function ProjectManagementSystem() {
       cancelText: "Cancelar",
       variant: "destructive",
     });
-
-    if (confirmed) {
-      const oldProjects = projects.filter((p) => p.id !== selectedProject.id);
-      await deleteProject(selectedProject.id);
-      if (oldProjects.length > 0) setSelectedProjectId(oldProjects[0].id);
-      else setSelectedProjectId(null);
+    if (confirmed && selectedProject) {
+      await deleteProjectMutation.mutateAsync(selectedProject.id, {
+        onSuccess: () => {
+          // Lógica de la UI: seleccionar otro proyecto
+          const remainingProjects = projects.filter(p => p.id !== selectedProject.id);
+          setSelectedProjectId(remainingProjects[0]?.id || null);
+        }
+      });
     }
   };
 
   const handleToggleProjectClosed = async () => {
     if (!selectedProject) return;
-    const action = selectedProject.status === "closed" ? "reabrir" : "cerrar";
+    const newStatus = selectedProject.status === "closed" ? "active" : "closed";
+    const action = newStatus === "active" ? "reabrir" : "cerrar";
+
     const confirmed = await confirm({
       title: `${action.charAt(0).toUpperCase() + action.slice(1)} Proyecto`,
       description: `¿Estás seguro de que quieres ${action} este proyecto?`,
@@ -156,28 +209,44 @@ export default function ProjectManagementSystem() {
     });
 
     if (confirmed) {
-      toggleProjectStatus(selectedProject);
+      await updateProjectMutation.mutateAsync({
+        ...selectedProject,
+        status: newStatus,
+      });
     }
   };
 
   const handleSaveTask = async (
     taskData: Omit<Task, "id"> | Task,
-    resourceAssignments?: Omit<ResourceAssignment, "id" | "task_id">[]
+    assignments: Omit<ResourceAssignment, "id" | "task_id">[] = []
   ) => {
     const dataToSave = {
       ...taskData,
       project_id: taskData.project_id || selectedProjectId,
     };
-    const savedTask = await ("id" in dataToSave
-      ? updateTask(dataToSave as Task, resourceAssignments || [])
-      : createTask(dataToSave as Task, resourceAssignments || []));
-    if (savedTask) {
-      setIsTaskModalOpen(false);
-      setEditingTask(undefined);
+
+    const formattedAssignments = assignments as Omit<
+      NewResourceAssignment,
+      "task_id"
+    >[];
+
+    if ("id" in dataToSave) {
+      await updateTaskMutation.mutateAsync({
+        id: dataToSave.id,
+        data: dataToSave as Task,
+        assignments: formattedAssignments,
+      });
+    } else {
+      await createTaskMutation.mutateAsync({
+        data: dataToSave as NewTask,
+        assignments: formattedAssignments,
+      });
     }
+    setIsTaskModalOpen(false);
+    setEditingTask(undefined);
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = async (taskId: UUID) => {
     const confirmed = await confirm({
       title: "Eliminar Tarea",
       description: "¿Estás seguro de que quieres eliminar esta tarea?",
@@ -185,46 +254,26 @@ export default function ProjectManagementSystem() {
       cancelText: "Cancelar",
       variant: "destructive",
     });
-
-    if (confirmed) {
-      deleteTask(taskId);
-    }
+    if (confirmed) await deleteTaskMutation.mutateAsync(taskId);
   };
 
-  const handleRemoveAssignment = async (assignmentId: string) => {
-    const confirmed = await confirm({
-      title: "Eliminar Asignación",
-      description: "¿Eliminar esta asignación de recurso?",
-      confirmText: "Eliminar",
-      cancelText: "Cancelar",
-      variant: "destructive",
-    });
+  // --- Render ---
 
-    if (confirmed) {
-      deleteAssignment(assignmentId);
-    }
-  };
+  if (loadingProjects || loadingTasks) return <ProjectSkeleton />;
 
-  const handleSelectProject = (projectId: string) => {
-    setSelectedProjectId(projectId);
-    setIsMobileSidebarOpen(false);
-  };
-
-  if (isLoading) return <ProjectSkeleton />;
-
-  if (error) {
+  if (projectsError) {
     return (
       <div className="min-h-screen bg-background text-destructive flex items-center justify-center">
-        Error: {error.message}
+        Error: {(projectsError as Error).message}
       </div>
     );
   }
 
-  if (!selectedProject) {
+  if (!selectedProject && !loadingProjects) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col gap-4 items-center justify-center p-8">
         <p className="text-xl">
-          No hay <strong>proyectos</strong> seleccionados.
+          No hay <strong>proyectos</strong> creados.
         </p>
         <Button
           onClick={() => {
@@ -240,6 +289,8 @@ export default function ProjectManagementSystem() {
             if (!isOpen) {
               setIsProjectModalOpen(false);
               setEditingProject(undefined);
+            } else {
+              setIsProjectModalOpen(true);
             }
           }}
         >
@@ -251,7 +302,7 @@ export default function ProjectManagementSystem() {
             </DialogHeader>
             <ProjectForm
               project={editingProject}
-              teamMembers={allTeamMembers}
+              teamMembers={teamMembers}
               onSave={handleSaveProject}
               onCancel={() => {
                 setIsProjectModalOpen(false);
@@ -262,6 +313,12 @@ export default function ProjectManagementSystem() {
         </Dialog>
       </div>
     );
+  }
+  
+  // Si selectedProject es undefined pero hay proyectos (ej. después de borrar)
+  // Este es un estado intermedio que el useEffect debe corregir, pero por si acaso:
+  if (!selectedProject) {
+     return <ProjectSkeleton />;
   }
 
   return (
@@ -303,7 +360,7 @@ export default function ProjectManagementSystem() {
           <div className="p-4 md:p-6">
             <ProjectHeader
               project={selectedProject}
-              teamMembers={allTeamMembers}
+              teamMembers={teamMembers} // El formulario de edición puede necesitar TODOS los miembros
               onEdit={() => {
                 setEditingProject(selectedProject);
                 setIsProjectModalOpen(true);
@@ -316,8 +373,16 @@ export default function ProjectManagementSystem() {
               <div className="flex gap-1 overflow-x-auto scrollbar-hide">
                 {[
                   { id: "tasks", label: "Tareas", icon: CheckCircle2Icon },
-                  { id: "assignments", label: "Asignaciones", icon: BoxIcon },
-                  { id: "budget", label: "Presupuesto", icon: DollarSignIcon },
+                  {
+                    id: "assignments",
+                    label: "Asignaciones",
+                    icon: BoxIcon,
+                  },
+                  {
+                    id: "budget",
+                    label: "Presupuesto",
+                    icon: DollarSignIcon,
+                  },
                   { id: "team", label: "Equipo", icon: UsersIcon },
                 ].map((tab) => {
                   const Icon = tab.icon;
@@ -339,11 +404,13 @@ export default function ProjectManagementSystem() {
               </div>
             </div>
 
+            {/* Renderizado de Pestañas con datos derivados CORREGIDOS */}
+            
             {activeTab === "tasks" && (
               <TaskList
-                tasks={projectTasks}
-                resources={resources}
-                assignments={resourceAssignments}
+                tasks={projectTasks} // OK
+                resources={resources} // El formulario de tareas necesita TODOS los recursos
+                assignments={resourceAssignments} // Pasa todas las asignaciones
                 filter={taskFilter}
                 onFilterChange={setTaskFilter}
                 onAddTask={() => {
@@ -363,20 +430,25 @@ export default function ProjectManagementSystem() {
               <ResourceAssignmentList
                 key={selectedProjectId}
                 projectId={selectedProjectId || projects[0]?.id}
+                // Este componente probablemente hace sus propios filtros
+                // o podría recibir 'projectAssignments' y 'projectResources'
               />
             )}
 
             {activeTab === "budget" && (
               <BudgetOverview
-                project={selectedProject}
-                tasks={projectTasks}
-                resources={projectResources}
-                assignments={resourceAssignments}
+                project={selectedProject} // OK
+                tasks={projectTasks} // OK
+                resources={projectResources} // CORREGIDO
+                assignments={projectAssignments} // OK
               />
             )}
 
             {activeTab === "team" && (
-              <TeamList teamMembers={projectTeamMembers} tasks={projectTasks} />
+              <TeamList
+                teamMembers={projectTeamMembers} // CORREGIDO
+                tasks={projectTasks} // OK
+              />
             )}
           </div>
         </main>
@@ -394,6 +466,7 @@ export default function ProjectManagementSystem() {
         </motion.button>
       </div>
 
+      {/* Modales */}
       <Dialog
         open={isProjectModalOpen}
         onOpenChange={(isOpen) => {
@@ -411,7 +484,7 @@ export default function ProjectManagementSystem() {
           </DialogHeader>
           <ProjectForm
             project={editingProject}
-            teamMembers={allTeamMembers}
+            teamMembers={teamMembers} // El formulario necesita TODOS los miembros para el selector de 'manager'
             onSave={handleSaveProject}
             onCancel={() => {
               setIsProjectModalOpen(false);
@@ -440,10 +513,10 @@ export default function ProjectManagementSystem() {
             task={editingTask}
             projectId={selectedProjectId || projects[0]?.id}
             project={selectedProject}
-            teamMembers={allTeamMembers}
-            resources={resources}
-            assignments={resourceAssignments}
-            tasks={tasks}
+            teamMembers={teamMembers} // El formulario necesita TODOS los miembros para el selector de 'assignee'
+            resources={resources} // El formulario necesita TODOS los recursos
+            assignments={resourceAssignments} // Pasa todas las asignaciones
+            tasks={tasks} // Pasa todas las tareas (para dependencias, etc.)
             onSave={handleSaveTask}
             onCancel={() => {
               setIsTaskModalOpen(false);

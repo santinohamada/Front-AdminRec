@@ -14,35 +14,57 @@ import type {
 export let INITIAL_TEAM: TeamMember[] = [
   {
     id: "team-1" as UUID,
-    name: "Ana García",
-    dni: "12345678A",
-    phone: "600-111-222",
-    email: "ana.garcia@example.com",
+    name: "Santino Hamada",
+    dni: "45275660",
+    phone: "3812115173",
+    email: "hola123@gmail.com",
     domicilio: "Calle Mayor 10, Madrid",
+    password:"hola123"
   },
   {
     id: "team-2" as UUID,
-    name: "Luis Mendoza",
-    dni: "87654321B",
-    phone: "600-333-444",
-    email: "luis.mendoza@example.com",
+    name: "Julieta Sleiman",
+    dni: "44258619",
+    phone: "3815183666",
+    email: "julietasleiman@gmail.com",
     domicilio: "Avenida Diagonal 55, Barcelona",
+    password:"hola123"
   },
   {
     id: "team-3" as UUID,
-    name: "Carla Sosa",
-    dni: "99988877C",
-    phone: "600-555-666",
-    email: "carla.sosa@example.com",
+    name: "Iñaki Ezequel Garcia Tarcic",
+    dni: "44596369",
+    phone: "3819682356",
+    email: "iñaki@gmail.com",
     domicilio: "Ronda Sant Pere 22, Barcelona",
+    password:"hola123"
   },
   {
     id: "team-4" as UUID,
-    name: "David Kim",
-    dni: "11122233D",
-    phone: "600-777-888",
-    email: "david.kim@example.com",
-    domicilio: "Plaza de España 3, Madrid",
+    name: "Andrés Gutierrez",
+    dni: "45275669",
+    phone: "3814125689",
+    email: "andres@gmail.com",
+    domicilio: "Plaza de España 1, Madrid",
+    password:"hola123"
+  },
+  {
+    id: "team-5" as UUID,
+    name: "Ulises Quiroga",
+    dni: "45275661",
+    phone: "3814125688",
+    email: "ulises@gmail.com",
+    domicilio: "Plaza de España 6, Madrid",
+    password:"hola123"
+  },
+  {
+    id: "team-6" as UUID,
+    name: "Milagros Salvatore",
+    dni: "45275621",
+    phone: "3814124688",
+    email: "milagros@gmail.com",
+    domicilio: "Plaza de España 53, Madrid",
+    password:"hola123"
   },
 ];
 

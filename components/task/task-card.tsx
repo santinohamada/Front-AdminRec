@@ -1,31 +1,48 @@
-"use client"
+"use client";
 
-import { EditIcon, TrashIcon, AlertCircleIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { formatCurrency, formatDate, getTaskStatusInfo } from "@/lib/project-utils"
-import { motion } from "framer-motion"
-import { useProjectStore } from "@/store/projectStore" // 👈 se conecta al store global
-import type { Task } from "@/lib/project-types"
+import { EditIcon, TrashIcon, AlertCircleIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  formatCurrency,
+  formatDate,
+  getTaskStatusInfo,
+} from "@/lib/project-utils";
+import { motion } from "framer-motion";
+// CAMBIO: Se eliminó useProjectStore
+// import { useProjectStore } from "@/store/projectStore"
+import type { Task } from "@/lib/project-types";
+
+// CAMBIO: Se importaron los hooks de React Query
+import { useResources } from "@/hooks/useResources";
+import { useAssignments } from "@/hooks/useAssignments";
+import { useTeam } from "@/hooks/useTeam";
 
 interface TaskCardProps {
-  task: Task
-  onEdit: (task: Task) => void
-  onDelete: (taskId: string) => void
-  isProjectClosed?: boolean
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+  isProjectClosed?: boolean;
 }
 
-export function TaskCard({ task, onEdit, onDelete, isProjectClosed = false }: TaskCardProps) {
-  // 👇 obtenemos datos del store global
-  const resources = useProjectStore((s) => s.resources)
-  const assignments = useProjectStore((s) => s.resourceAssignments)
-const team = useProjectStore(s=>s.teamMembers)
-  const taskAssignments = assignments.filter((a) => a.task_id === task.id)
-  const statusInfo = getTaskStatusInfo(task.status)
+export function TaskCard({
+  task,
+  onEdit,
+  onDelete,
+  isProjectClosed = false,
+}: TaskCardProps) {
+  // CAMBIO: Obtenemos datos de los hooks de React Query con valores por defecto
+  const { data: resources = [] } = useResources();
+  const { data: assignments = [] } = useAssignments();
+  const { data: team = [] } = useTeam();
 
-  // 👇 buscamos el nombre del responsable (si está asignado)
-  const assignee = team.find((member) => member.id === task.assignee_id)?.name || "Sin asignar"
+  // El resto de la lógica del componente no necesita cambios
+  const taskAssignments = assignments.filter((a) => a.task_id === task.id);
+  const statusInfo = getTaskStatusInfo(task.status);
+
+  const assignee =
+    team.find((member) => member.id === task.assignee_id)?.name || "Sin asignar";
 
   return (
     <motion.div
@@ -39,25 +56,37 @@ const team = useProjectStore(s=>s.teamMembers)
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <h3 className="font-semibold text-foreground text-lg">{task.name}</h3>
+              <h3 className="font-semibold text-foreground text-lg">
+                {task.name}
+              </h3>
               <Badge variant="default" className={statusInfo.color}>
-                {task.status === "blocked" && <AlertCircleIcon className="h-3 w-3 mr-1" />}
+                {task.status === "blocked" && (
+                  <AlertCircleIcon className="h-3 w-3 mr-1" />
+                )}
                 {statusInfo.label}
               </Badge>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              {task.description}
+            </p>
 
             {/* Barra de progreso */}
             <div className="mb-4">
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-muted-foreground">Progreso</span>
-                <span className="text-foreground font-medium">{task.progress}%</span>
+                <span className="text-foreground font-medium">
+                  {task.progress}%
+                </span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
                 <motion.div
                   className={`h-full ${
-                    task.progress === 100 ? "bg-green-500" : task.progress >= 50 ? "bg-blue-500" : "bg-yellow-500"
+                    task.progress === 100
+                      ? "bg-green-500"
+                      : task.progress >= 50
+                      ? "bg-blue-500"
+                      : "bg-yellow-500"
                   }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${task.progress}%` }}
@@ -69,20 +98,32 @@ const team = useProjectStore(s=>s.teamMembers)
             {/* Info general */}
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex flex-col">
-                <span className="text-muted-foreground text-xs">Asignado a</span>
+                <span className="text-muted-foreground text-xs">
+                  Asignado a
+                </span>
                 <span className="text-foreground font-medium">{assignee}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-muted-foreground text-xs">Fecha de Vencimiento</span>
-                <span className="text-foreground font-medium">{formatDate(task.end_date)}</span>
+                <span className="text-muted-foreground text-xs">
+                  Fecha de Vencimiento
+                </span>
+                <span className="text-foreground font-medium">
+                  {formatDate(task.end_date)}
+                </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-muted-foreground text-xs">Horas</span>
-                <span className="text-foreground font-medium">{task.estimated_hours}h</span>
+                <span className="text-foreground font-medium">
+                  {task.estimated_hours}h
+                </span>
               </div>
               <div className="flex flex-col">
-                <span className="text-muted-foreground text-xs">Presupuesto</span>
-                <span className="text-foreground font-medium">{formatCurrency(task.budget_allocated)}</span>
+                <span className="text-muted-foreground text-xs">
+                  Presupuesto
+                </span>
+                <span className="text-foreground font-medium">
+                  {formatCurrency(task.budget_allocated)}
+                </span>
               </div>
             </div>
 
@@ -90,12 +131,14 @@ const team = useProjectStore(s=>s.teamMembers)
             {taskAssignments.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {taskAssignments.map((assignment) => {
-                  const resource = resources.find((r) => r.id === assignment.resource_id)
+                  const resource = resources.find(
+                    (r) => r.id === assignment.resource_id
+                  );
                   return (
                     <Badge key={assignment.id} variant="outline" className="text-xs">
                       {resource?.name} ({assignment.hours_assigned}h)
                     </Badge>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -125,5 +168,5 @@ const team = useProjectStore(s=>s.teamMembers)
         </div>
       </Card>
     </motion.div>
-  )
+  );
 }

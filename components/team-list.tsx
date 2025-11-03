@@ -31,7 +31,7 @@ export function TeamList({ teamMembers, tasks }: TeamListProps) {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground">{member.name}</h4>
-                    <p className="text-sm text-muted-foreground">{member.role}</p>
+                 
                     <p className="text-sm text-muted-foreground mt-1">{member.email}</p>
 
                     {memberTasks.length > 0 && (

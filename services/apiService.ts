@@ -84,6 +84,10 @@ export const projectService = {
     if (USE_MOCKS) return getLocalData("projects", INITIAL_PROJECTS)
     return apiFetch("/projects")
   },
+  async getProjectById(id:UUID): Promise<Project | undefined> {
+    if (USE_MOCKS) return getLocalData("projects", INITIAL_PROJECTS).find((p) => p.id === id)
+    return apiFetch("/projects",{body:JSON.stringify(id)})
+  },
   async createProject(data: NewProject): Promise<Project> {
     if (USE_MOCKS) {
       const newProject: Project = { ...data, id: crypto.randomUUID(), status: "active" }
@@ -119,6 +123,10 @@ export const taskService = {
   async getTasks(): Promise<Task[]> {
     if (USE_MOCKS) return getLocalData("tasks", INITIAL_TASKS)
     return apiFetch("/tasks")
+  },
+  async getTaskById(id:UUID): Promise<Task | undefined> {
+    if (USE_MOCKS) return getLocalData("tasks", INITIAL_TASKS).find((t) => t.id === id)
+    return apiFetch("/tasks",{body:JSON.stringify(id)})
   },
   async createTask(
     data: NewTask,
@@ -330,82 +338,6 @@ export const assignmentService = {
     return apiFetch("/assignments")
   },
 
-  async getResources(): Promise<Resource[]> {
-    if (USE_MOCKS) return getLocalData("resources", INITIAL_RESOURCES)
-    return apiFetch("/resources")
-  },
 
-  async createAssignment(data: NewResourceAssignment): Promise<ResourceAssignment> {
-    if (USE_MOCKS) {
-      const newAssignment: ResourceAssignment = {
-        id: crypto.randomUUID(),
-        task_id: data.task_id,
-        resource_id: data.resource_id,
-        hours_assigned: data.hours_assigned,
-        start_date: data.start_date,
-        end_date: data.end_date,
-      }
 
-      const resources = getLocalData("resources", INITIAL_RESOURCES)
-      const updatedResources = resources.map((r) =>
-        r.id === data.resource_id ? { ...r, available_hours: Math.max(0, r.available_hours - data.hours_assigned),assigned_hours: (r.assigned_hours || 0) + data.hours_assigned } : r,
-      )
-
-      const updatedAssignments = [...getLocalData("assignments", INITIAL_ASSIGNMENTS), newAssignment]
-      setLocalData("assignments", updatedAssignments)
-      setLocalData("resources", updatedResources)
-
-      return newAssignment
-    }
-
-    return apiFetch(`/assignments`, { method: "POST", body: JSON.stringify(data) })
-  },
-
-  async updateAssignment(id: UUID, data: ResourceAssignment): Promise<ResourceAssignment> {
-    if (USE_MOCKS) {
-      const assignments = getLocalData("assignments", INITIAL_ASSIGNMENTS)
-      const prev = assignments.find((a) => a.id === id)
-      const updatedAssignments = assignments.map((a) => (a.id === id ? data : a))
-
-      const resources = getLocalData("resources", INITIAL_RESOURCES)
-      const updatedResources = resources.map((r) => {
-        if (r.id !== data.resource_id) return r
-        const diff = data.hours_assigned - (prev?.hours_assigned || 0)
-        return {
-          ...r,
-          available_hours: Math.max(0, r.available_hours - diff),
-          assigned_hours: Math.max(0, (r.assigned_hours || 0) + diff),
-        }
-      })
-
-      setLocalData("assignments", updatedAssignments)
-      setLocalData("resources", updatedResources)
-      return data
-    }
-
-    return apiFetch(`/assignments/${id}`, { method: "PUT", body: JSON.stringify(data) })
-  },
-
-  async deleteAssignment(id: UUID): Promise<void> {
-    if (USE_MOCKS) {
-      const assignments = getLocalData("assignments", INITIAL_ASSIGNMENTS)
-      const assignmentToRemove = assignments.find((a) => a.id === id)
-      const filteredAssignments = assignments.filter((a) => a.id !== id)
-
-      const resources = getLocalData("resources", INITIAL_RESOURCES)
-      const updatedResources = assignmentToRemove
-        ? resources.map((r) =>
-            r.id === assignmentToRemove.resource_id
-              ? { ...r, available_hours: r.available_hours + assignmentToRemove.hours_assigned, assigned_hours: Math.max(0, (r.assigned_hours || 0) - assignmentToRemove.hours_assigned) }
-              : r,
-          )
-        : resources
-
-      setLocalData("assignments", filteredAssignments)
-      setLocalData("resources", updatedResources)
-      return
-    }
-
-    return apiFetch(`/assignments/${id}`, { method: "DELETE" })
-  },
 }

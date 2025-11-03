@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "../components/navbar";
+import { ReactQueryProvider } from "./providers";
 
 export const metadata: Metadata = {
   title: "Gestor de Proyectos",
@@ -16,8 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
+        
       <Navbar/>
-        {children}</body>
+      <ReactQueryProvider>{children}</ReactQueryProvider></body>
     </html>
   );
 }
