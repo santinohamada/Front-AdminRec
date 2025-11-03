@@ -11,13 +11,6 @@ export function useTasks() {
   })
 }
 
-export function useTask(id?: UUID) {
-  return useQuery<Task | undefined>({
-    queryKey: ["task", id],
-    queryFn: () => (id ? taskService.getTaskById(id) : Promise.resolve(undefined)),
-    enabled: !!id,
-  })
-}
 
 export function useCreateTask() {
   const qc = useQueryClient()
