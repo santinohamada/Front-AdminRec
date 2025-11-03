@@ -134,7 +134,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 {/* --- CAMBIO: Ruta de informe actualizada --- */}
-                <Link href="/reports/general">
+                <Link href="/report">
                   <Button
                     variant="ghost"
                     className="w-full justify-between group"
