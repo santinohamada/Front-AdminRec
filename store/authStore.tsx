@@ -2,11 +2,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { TeamMember, UUID } from "@/lib/project-types";
-import { INITIAL_TEAM } from "@/services/mocks";
 
 interface AuthState {
   currentUser: TeamMember | null;
-  login: (userId: UUID) => void;
+  login: (user: TeamMember) => void;
   logout: () => void;
 }
 
@@ -15,17 +14,13 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       currentUser: null, // Se rehidratará desde LocalStorage
       
-      login: (userId: UUID) => {
-        const user = INITIAL_TEAM.find((u) => u.id === userId);
-        if (user) {
-          set({ currentUser: user });
-          // Ya no seteamos un cookie
-        }
+      // 3. --- CAMBIO --- Implementación de 'login' simplificada
+      login: (user: TeamMember) => {
+        set({ currentUser: user });
       },
       
       logout: () => {
         set({ currentUser: null });
-        // Ya no borramos un cookie
       },
     }),
     {

@@ -1,48 +1,76 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { motion } from "framer-motion"
-import { Home, Package, FolderKanban, Users, Menu, X } from "lucide-react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation"; // Importar useRouter
+import { motion } from "framer-motion";
+import {
+  Home,
+  Package,
+  FolderKanban,
+  Users,
+  Menu,
+  X,
+  LogOut, // Importar ícono de Logout
+} from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/authStore"; // Importar el store de autenticación
 
 const navItems = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/projects", label: "Proyectos", icon: FolderKanban },
   { href: "/resources", label: "Recursos", icon: Package },
   { href: "/team", label: "Equipo", icon: Users },
-]
+];
 
 export function Navbar() {
-  const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pathname = usePathname();
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Obtener 'logout' y 'currentUser' del store
+  const { logout, currentUser } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    setMobileMenuOpen(false); // Cierra el menú móvil si está abierto
+    router.push("/login"); // Redirige a la página de login
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2"
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
               <FolderKanban className="h-5 w-5" />
             </div>
-            
           </motion.div>
         </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:items-center md:gap-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href
-            const Icon = item.icon
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
 
             return (
               <Link key={item.href} href={item.href}>
-                <motion.div className="relative px-4 py-2" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div
+                  className="relative px-4 py-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <div
                     className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      isActive
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -64,14 +92,43 @@ export function Navbar() {
                   )}
                 </motion.div>
               </Link>
-            )
+            );
           })}
         </div>
 
-        {/* Mobile Menu Button */}
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        {/* --- CAMBIO: Contenedor para botones de la derecha --- */}
+        <div className="flex items-center gap-2">
+          {/* User Info & Logout (Desktop) */}
+          <div className="hidden md:flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {/* Saludamos al usuario por su primer nombre */}
+               {currentUser?.name ? "Cerrar Sesión" : ""}
+            </span>
+           {currentUser && (
+ <Button
+ variant="ghost"
+ size="icon"
+ onClick={handleLogout}
+ title="Cerrar sesión"
+>
+ <LogOut className="h-5 w-5" />
+</Button>) }
+          </div>
+
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Navigation */}
@@ -89,8 +146,8 @@ export function Navbar() {
       >
         <div className="container space-y-1 px-4 py-4">
           {navItems.map((item, index) => {
-            const isActive = pathname === item.href
-            const Icon = item.icon
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
 
             return (
               <motion.div
@@ -115,10 +172,38 @@ export function Navbar() {
                   </div>
                 </Link>
               </motion.div>
-            )
+            );
           })}
+
+          {/* --- CAMBIO: Separador y botón de Logout (Mobile) --- */}
+          <motion.div
+            className="pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: navItems.length * 0.1, duration: 0.3 }}
+          >
+            <div className="border-t"></div>
+          </motion.div>
+
+          <motion.div
+            key="logout"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{
+              delay: (navItems.length + 1) * 0.1,
+              duration: 0.3,
+            }}
+          >
+            <div
+              onClick={handleLogout} // Usar el handler
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Cerrar Sesión</span>
+            </div>
+          </motion.div>
         </div>
       </motion.div>
     </nav>
-  )
+  );
 }

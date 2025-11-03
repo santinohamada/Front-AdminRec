@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation"; // Importar useSearchParams
-import { LogInIcon, AlertCircleIcon } from "lucide-react"; // Para el error
+// 1. Importar Suspense y Skeleton
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { LogInIcon, AlertCircleIcon } from "lucide-react";
 
-// 1. Importar el store de autenticación
+// 2. Importar el store de autenticación
 import { useAuthStore } from "@/store/authStore";
-// 2. Importar los datos mock para la lista de usuarios
-import { INITIAL_TEAM } from "@/services/mocks"; // Asegúrate que esta ruta es correcta
+// 3. --- CAMBIO --- Importar el NUEVO authService
+import { authService } from "@/services/apiService"
 
-// 3. Importar componentes de UI
+// 4. Importar componentes de UI
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,16 +19,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Importar Input
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert"; // Para el error
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function LoginPage() {
+/**
+ * Componente hijo que maneja la lógica de login.
+ * Se aísla para poder usar useSearchParams() de forma segura.
+ */
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login } = useAuthStore(); // Asume que authStore.login() acepta un TeamMember
 
-  const { login } = useAuthStore();
-
-  // --- CAMBIO: Nuevos estados para email, password y error ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,40 +43,107 @@ export default function LoginPage() {
     if (!email || !password) return;
 
     setIsLoading(true);
-    setError(""); // Limpiar errores previos
+    setError("");
 
-    // Simular una pequeña demora (como si fuera una llamada API)
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      // --- CAMBIO ---
+      // 5. Llamar al authService en lugar de la lógica local
+      const user = await authService.login(email, password);
 
-    // --- CAMBIO: Lógica de validación ---
-    
-    // 1. Buscar al usuario por email
-    const user = INITIAL_TEAM.find(
-      (member) => member.email.toLowerCase() === email.toLowerCase()
-    );
+      // 6. Si tiene éxito, guardar el usuario en el store
+      login(user);
 
-    // 2. Validar si el usuario existe
-    if (!user) {
-      setError("No se encontró ningún usuario con ese correo electrónico.");
+      // 7. Redirigir
+      const fromPath = searchParams.get("from") || "/";
+      router.push(fromPath);
+      
+    } catch (err) {
+      // 8. El servicio lanzará un error que podemos mostrar
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Ocurrió un error inesperado.");
+      }
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // 3. Validar la contraseña (asumiendo que añadiste `password` a tus mocks)
-    // @ts-ignore - Asumiendo que el tipo TeamMember no tiene password aún
-    if (user.password !== password) {
-      setError("Contraseña incorrecta. Por favor, inténtalo de nuevo.");
-      setIsLoading(false);
-      return;
-    }
-
-    // 4. Éxito: Llamar a la función 'login' del store
-    login(user.id);
-
-   
-    router.push("/");
   };
 
+  return (
+    <form onSubmit={handleLogin} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Correo Electrónico</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="ana.garcia@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="password">Contraseña</Label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={isLoading || !email || !password}
+      >
+        {isLoading ? (
+          "Ingresando..."
+        ) : (
+          <>
+            <LogInIcon className="mr-2 h-4 w-4" />
+            Ingresar
+          </>
+        )}
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * Fallback de carga para Suspense.
+ */
+function LoginFormFallback() {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+      <Skeleton className="h-10 w-full" />
+    </div>
+  );
+}
+
+/**
+ * Página de Login principal (export default).
+ * Envuelve el formulario en Suspense para evitar el error de build.
+ */
+export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -82,56 +154,9 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* --- CAMBIO: Campo de Email --- */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="ana.garcia@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* --- CAMBIO: Campo de Contraseña --- */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* --- CAMBIO: Muestra de Error --- */}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircleIcon className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !email || !password}
-            >
-              {isLoading ? (
-                "Ingresando..."
-              ) : (
-                <>
-                  <LogInIcon className="mr-2 h-4 w-4" />
-                  Ingresar
-                </>
-              )}
-            </Button>
-          </form>
+          <Suspense fallback={<LoginFormFallback />}>
+            <LoginForm />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

@@ -390,3 +390,20 @@ export const assignmentService = {
     return apiFetch("/assignments");
   },
 };
+export const authService = {
+  async login(email: string, password: string): Promise<TeamMember> {
+    if (USE_MOCKS) {
+      const team = getLocalData("team", INITIAL_TEAM);
+      const user = team.find(
+        (member) => member.email === email && member.password === password
+      );
+      if (!user) throw new Error("Credenciales Invalidas");
+      return user;
+    
+    }
+    return apiFetch("/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  }
+}
