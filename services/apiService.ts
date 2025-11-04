@@ -66,6 +66,9 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const errorMessage = errorBody.message || response.statusText;
     throw new Error(`API error (${response.status}): ${errorMessage}`);
   }
+  if(response.status === 204){
+    return 
+  }
   return response.json();
 };
 
