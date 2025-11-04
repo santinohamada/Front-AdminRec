@@ -361,6 +361,7 @@ export const teamService = {
     return apiFetch("/team", { method: "POST", body: JSON.stringify(data) });
   },
   async updateTeamMember(id: UUID, data: TeamMember): Promise<TeamMember> {
+    console.log(data)
     if (USE_MOCKS) {
       const updated = getLocalData("team", INITIAL_TEAM).map((m) =>
         m.id === id ? data : m
@@ -370,7 +371,7 @@ export const teamService = {
     }
     return apiFetch(`/team/${id}`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: JSON.stringify({id:data.id,name:data.name,dni:data.dni,phone:data.phone,email:data.email,domicilio:data.domicilio}),
     });
   },
   async deleteTeamMember(id: UUID): Promise<void> {
