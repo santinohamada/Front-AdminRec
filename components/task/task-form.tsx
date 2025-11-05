@@ -95,7 +95,7 @@ export function TaskForm({
     start_date: task?.start_date || "",
     end_date: task?.end_date || "",
     priority: task?.priority || "medium",
-    progress: task?.progress ? String(task.progress) : "0",
+    progress: task?.progress ? String(task.progress) : "",
     estimated_hours: task?.estimated_hours ? String(task.estimated_hours) : "",
     budget_allocated: task?.budget_allocated
       ? String(task.budget_allocated)
@@ -546,6 +546,7 @@ export function TaskForm({
             type="number"
             min="0"
             max="100"
+            placeholder="0"
             value={formData.progress} // Muestra el string
             onChange={(e) =>
               setFormData({
@@ -659,6 +660,7 @@ export function TaskForm({
           <Input
             type="number"
             min="0"
+            placeholder="0"
             value={formData.estimated_hours} // Muestra el string
             onChange={(e) =>
               setFormData({
@@ -677,6 +679,7 @@ export function TaskForm({
           <Input
             type="number"
             min="0"
+            placeholder="0"
             max={project.total_budget}
             value={formData.budget_allocated} // Muestra el string
             onChange={(e) => {
@@ -755,7 +758,7 @@ export function TaskForm({
                       <Input
                         type="number"
                         min="0"
-                        placeholder="Horas"
+                        placeholder="20"
                         value={selected.hours_assigned} // Muestra el string
                         onChange={(e) =>
                           handleResourceChange(
