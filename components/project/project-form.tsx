@@ -1,32 +1,40 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-// Importamos ProjectStatus para la corrección
-import type { Project, TeamMember, ProjectStatus, Manager } from "@/lib/project-types"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+// Importamos los tipos
+import type { Project, TeamMember, ProjectStatus } from "@/lib/project-types"
 import { motion } from "framer-motion"
+import { useAuthStore } from "@/store/authStore"
 
 interface ProjectFormProps {
   project?: Project
-  teamMembers: TeamMember[] // Added teamMembers prop to populate manager dropdown
+  teamMembers: TeamMember[]
   onSave: (projectData: Omit<Project, "id"> | Project) => void
   onCancel: () => void
 }
 
 export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectFormProps) {
+  const currentUser = useAuthStore(state=>state.currentUser)
   const [formData, setFormData] = useState({
     name: project?.name || "",
     description: project?.description || "",
     start_date: project?.start_date || "",
     end_date: project?.end_date || "",
-    total_budget: project?.total_budget || 0,
-    manager_id: project?.manager_id || "team-1", // Added manager_id to form state
+    // --- CORRECCIÓN 1: Estado inicial como String o "" ---
+    total_budget: project?.total_budget ? String(project.total_budget) : "",
+    manager_id: project?.manager_id || currentUser!.id,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -36,7 +44,10 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
 
     const newErrors: Record<string, string> = {}
 
-    // ... (Validaciones existentes - sin cambios) ...
+    // --- CORRECCIÓN 3: Conversión y Validación ---
+    const budgetValue = parseFloat(formData.total_budget)
+
+    // --- Validaciones ---
     if (!formData.name.trim()) {
       newErrors.name = "El nombre del proyecto es requerido"
     }
@@ -52,10 +63,16 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
     if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
       newErrors.end_date = "La fecha de fin debe ser posterior a la fecha de inicio"
     }
-    if (formData.total_budget <= 0) {
-      newErrors.total_budget = "El presupuesto debe ser mayor a 0"
+    
+    // Validación de presupuesto (usando el string y el número)
+    if (!formData.total_budget.trim()) {
+      newErrors.total_budget = "El presupuesto es requerido"
+    } else if (isNaN(budgetValue) || budgetValue <= 0) {
+      newErrors.total_budget = "El presupuesto debe ser un número válido mayor a 0"
     }
-    if (!formData.manager_id || formData.manager_id === "team-1") {
+    
+    // Asumiendo que "0" es el valor del placeholder deshabilitado
+    if (!formData.manager_id || formData.manager_id === "0" || formData.manager_id === "team-1") {
       newErrors.manager_id = "El responsable del proyecto es requerido"
     }
 
@@ -64,23 +81,22 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
       return
     }
 
-    // --- CORRECCIÓN ---
-    // Debemos agregar la propiedad 'status' que falta
-    // para que coincida con el tipo Project o Omit<Project, "id">.
-
+    // --- Lógica de Guardado ---
     if (project) {
-      // Editando: Preservamos el ID y el status existente
+      // Editando: Preservamos ID y status
       const updatedProject: Project = {
         ...formData,
         id: project.id,
-        status: project.status, // <-- Añadido para preservar el estado
+        status: project.status, 
+        total_budget: budgetValue, // <-- Pasa el NÚMERO
       }
       onSave(updatedProject)
     } else {
-      // Creando: Asignamos un status por defecto
+      // Creando: Asignamos status por defecto
       const newProject: Omit<Project, "id"> = {
         ...formData,
-        status: "active", // <-- Añadido con valor por defecto
+        status: "active", 
+        total_budget: budgetValue, // <-- Pasa el NÚMERO
       }
       onSave(newProject)
     }
@@ -100,6 +116,7 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
         },
       }}
     >
+      {/* --- Campo Nombre --- */}
       <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
         <Label htmlFor="name">Nombre del Proyecto</Label>
         <Input
@@ -112,6 +129,7 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
         {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
       </motion.div>
 
+      {/* --- Campo Descripción --- */}
       <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
         <Label htmlFor="description">Descripción</Label>
         <Textarea
@@ -125,17 +143,17 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
         {errors.description && <p className="text-sm text-destructive mt-1">{errors.description}</p>}
       </motion.div>
 
+      {/* --- Campo Manager (Responsable) --- */}
       <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
         <Label htmlFor="manager">Responsable del Proyecto</Label>
         <Select
           value={formData.manager_id}
-          onValueChange={(value:string) => setFormData({ ...formData, manager_id: value })}
+          onValueChange={(value: string) => setFormData({ ...formData, manager_id: value })}
         >
           <SelectTrigger className="mt-1.5">
             <SelectValue placeholder="Seleccione el responsable del proyecto" />
           </SelectTrigger>
           <SelectContent>
-            {/* Añadimos una opción por defecto/deshabilitada */}
             <SelectItem value="0" disabled>
               Seleccione un responsable...
             </SelectItem>
@@ -149,6 +167,7 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
         {errors.manager_id && <p className="text-sm text-destructive mt-1">{errors.manager_id}</p>}
       </motion.div>
 
+      {/* --- Campos de Fechas --- */}
       <motion.div
         className="grid grid-cols-2 gap-4"
         variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
@@ -178,21 +197,23 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
         </div>
       </motion.div>
 
+      {/* --- Campo Presupuesto --- */}
       <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
         <Label htmlFor="total_budget">Presupuesto Total ($)</Label>
         <Input
           id="total_budget"
-          type="number"
-          min="0"
-          step="0.01" // Permite centavos
-          value={formData.total_budget}
-          onChange={(e) => setFormData({ ...formData, total_budget: Number.parseFloat(e.target.value) || 0 })}
+          // --- CORRECCIÓN 2: type="number" para mejor UX móvil ---
+          type="number" 
+          value={formData.total_budget} // Sigue siendo un string
+          // El onChange se mantiene simple
+          onChange={(e) => setFormData({ ...formData, total_budget: e.target.value })}
           placeholder="0.00"
           className="mt-1.5"
         />
         {errors.total_budget && <p className="text-sm text-destructive mt-1">{errors.total_budget}</p>}
       </motion.div>
 
+      {/* --- Botones de Acción --- */}
       <motion.div
         className="flex justify-end gap-3 pt-4"
         variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}

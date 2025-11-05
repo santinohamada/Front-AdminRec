@@ -19,6 +19,7 @@ import type {
   TaskStatus,
 } from "../../lib/project-types";
 
+// --- (Funciones de utilidad) ---
 const deriveStatusFromProgress = (
   progress: number,
   isBlocked: boolean
@@ -29,12 +30,14 @@ const deriveStatusFromProgress = (
   return "not_started";
 };
 
+// Asumiendo que estas funciones existen en la ruta importada
 import {
   checkResourceConflicts,
   validateTaskProgress,
   validateTaskDatesInProjectRange,
   validateProjectBudget,
 } from "../../lib/project-utils";
+// --- (Fin de funciones de utilidad) ---
 
 interface TaskFormProps {
   task?: Task;
@@ -51,14 +54,23 @@ interface TaskFormProps {
   onCancel: () => void;
 }
 
+// El estado del formulario de recursos debe usar 'string' para las horas
 interface ResourceAssignmentForm {
   resource_id: UUID;
-  hours_assigned: number;
+  hours_assigned: string; // <-- De number a string
   start_date: string;
   end_date: string;
 }
 
-type TaskFormData = Omit<NewTask, "status" | "completed">;
+// El estado del formulario principal debe usar 'string' para los números
+type TaskFormState = Omit<
+  NewTask,
+  "status" | "completed" | "progress" | "estimated_hours" | "budget_allocated"
+> & {
+  progress: string;
+  estimated_hours: string;
+  budget_allocated: string;
+};
 
 export function TaskForm({
   task,
@@ -74,7 +86,8 @@ export function TaskForm({
   const defaultAssigneeId =
     task?.assignee_id || (teamMembers.length > 0 ? teamMembers[0].id : "");
 
-  const [formData, setFormData] = useState<TaskFormData>({
+  // Inicializar el estado con strings para los campos numéricos
+  const [formData, setFormData] = useState<TaskFormState>({
     project_id: task?.project_id || projectId,
     name: task?.name || "",
     description: task?.description || "",
@@ -82,9 +95,11 @@ export function TaskForm({
     start_date: task?.start_date || "",
     end_date: task?.end_date || "",
     priority: task?.priority || "medium",
-    progress: task?.progress || 0,
-    estimated_hours: task?.estimated_hours || 0,
-    budget_allocated: task?.budget_allocated || 0,
+    progress: task?.progress ? String(task.progress) : "0",
+    estimated_hours: task?.estimated_hours ? String(task.estimated_hours) : "",
+    budget_allocated: task?.budget_allocated
+      ? String(task.budget_allocated)
+      : "",
   });
 
   const [isBlocked, setIsBlocked] = useState(task?.status === "blocked");
@@ -104,7 +119,8 @@ export function TaskForm({
       setSelectedResources(
         taskAssignments.map((a) => ({
           resource_id: a.resource_id,
-          hours_assigned: a.hours_assigned,
+          // Convertir 'hours_assigned' a string al cargar
+          hours_assigned: String(a.hours_assigned),
           start_date: a.start_date,
           end_date: a.end_date,
         }))
@@ -112,6 +128,7 @@ export function TaskForm({
     }
   }, [task, assignments]);
 
+  // Ajustar fechas de recursos si cambian las fechas de la tarea
   useEffect(() => {
     setSelectedResources((prev) =>
       prev.map((res) => {
@@ -135,65 +152,73 @@ export function TaskForm({
     );
   }, [formData.start_date, formData.end_date]);
 
+  // Validación de recursos (conflictos y disponibilidad)
   useEffect(() => {
     setCriticalError(null);
-  
+
     const conflicts: {
       resourceName: string;
       conflictingTasks: string[];
       dates: string;
     }[] = [];
     const warnings: string[] = [];
-  
-    // Map: resource_id -> total de horas que se están solicitando en el formulario (puede haber varias filas por recurso)
-    const desiredByResource = selectedResources.reduce<Record<string, number>>((acc, s) => {
-      if (!s.resource_id) return acc;
-      acc[s.resource_id] = (acc[s.resource_id] || 0) + (Number(s.hours_assigned) || 0);
-      return acc;
-    }, {});
-  
-    // Recorremos cada recurso que se está intentando asignar
+
+    // Usar parseFloat para leer 'hours_assigned' (string)
+    const desiredByResource = selectedResources.reduce<Record<string, number>>(
+      (acc, s) => {
+        if (!s.resource_id) return acc;
+        // Convertir el string a número para sumar
+        acc[s.resource_id] =
+          (acc[s.resource_id] || 0) + (parseFloat(s.hours_assigned) || 0);
+        return acc;
+      },
+      {}
+    );
+
     for (const [resourceId, desiredTotal] of Object.entries(desiredByResource)) {
       const resource = resources.find((r) => r.id === resourceId);
       if (!resource) continue;
-  
-      // Horas que este recurso tiene actualmente asignadas a ESTA tarea (si estamos editando)
+
       const currentAssignedOnThisTask = assignments
         .filter((a) => a.resource_id === resourceId && a.task_id === task?.id)
         .reduce((sum, a) => sum + (a.hours_assigned || 0), 0);
-  
-      // available_hours en tus recursos ya refleja la capacidad restante *excluyendo* todas las asignaciones.
-      // Para poder reutilizar las horas que ya estaban en esta tarea, las sumamos de vuelta.
-      const availableForThisTask = (resource.available_hours || 0) + currentAssignedOnThisTask;
-  
-      // Si lo que el formulario intenta asignar excede la capacidad reutilizable, avisamos
+
+      const availableForThisTask =
+        (resource.available_hours || 0) + currentAssignedOnThisTask;
+
       if (desiredTotal > availableForThisTask) {
         warnings.push(
-          `${resource.name}: las horas solicitadas (${desiredTotal}h) exceden las horas disponibles (${availableForThisTask}h). Exceso: ${desiredTotal - availableForThisTask}h`
+          `${resource.name}: las horas solicitadas (${desiredTotal}h) exceden las horas disponibles (${availableForThisTask}h). Exceso: ${
+            desiredTotal - availableForThisTask
+          }h`
         );
       }
-  
-      // Además comprobamos conflictos por rango de fechas para cada fila que use este recurso
-      const selectedEntriesForResource = selectedResources.filter((s) => s.resource_id === resourceId);
+
+      // Lógica de conflictos de fecha
+      const selectedEntriesForResource = selectedResources.filter(
+        (s) => s.resource_id === resourceId
+      );
       for (const sel of selectedEntriesForResource) {
         if (!sel.start_date || !sel.end_date) continue;
-  
+
         const { hasConflict, conflictingAssignments } = checkResourceConflicts(
           resourceId,
           sel.start_date,
           sel.end_date,
-          task?.id, // importante: ignorar la misma tarea en la comprobación
+          task?.id,
           assignments
         );
-  
+
         if (hasConflict) {
           const conflictingTaskNames = conflictingAssignments
             .map((a) => {
               const conflictTask = tasks.find((t) => t.id === a.task_id);
-              return conflictTask ? `${conflictTask.name} (${a.start_date} - ${a.end_date})` : "";
+              return conflictTask
+                ? `${conflictTask.name} (${a.start_date} - ${a.end_date})`
+                : "";
             })
             .filter(Boolean);
-  
+
           conflicts.push({
             resourceName: resource.name,
             conflictingTasks: conflictingTaskNames,
@@ -202,17 +227,18 @@ export function TaskForm({
         }
       }
     }
-  
+
     setResourceConflicts(conflicts);
     setValidationWarnings(warnings);
   }, [selectedResources, task, assignments, resources, tasks]);
-  
+
   const handleAddResource = () => {
     setSelectedResources([
       ...selectedResources,
       {
         resource_id: "",
-        hours_assigned: 0,
+        // Usar string vacío para el nuevo valor
+        hours_assigned: "",
         start_date: formData.start_date || "",
         end_date: formData.end_date || "",
       },
@@ -223,10 +249,11 @@ export function TaskForm({
     setSelectedResources(selectedResources.filter((_, i) => i !== index));
   };
 
+  // Simplificar el handler, 'value' siempre será string
   const handleResourceChange = (
     index: number,
-    field: "resource_id" | "hours_assigned" | "start_date" | "end_date",
-    value: string | number
+    field: keyof ResourceAssignmentForm,
+    value: string
   ) => {
     const updated = [...selectedResources];
     updated[index] = { ...updated[index], [field]: value };
@@ -237,6 +264,12 @@ export function TaskForm({
     e.preventDefault();
     setCriticalError(null);
 
+    // Convertir todos los strings de estado a números ANTES de validar
+    const progressValue = parseInt(formData.progress, 10) || 0;
+    const estimatedHoursValue = parseFloat(formData.estimated_hours) || 0;
+    const budgetValue = parseFloat(formData.budget_allocated) || 0;
+
+    // --- Validaciones Críticas ---
     if (project.status === "closed") {
       setCriticalError("No se pueden modificar tareas en un proyecto cerrado.");
       return;
@@ -259,7 +292,8 @@ export function TaskForm({
       return;
     }
 
-    const progressValidation = validateTaskProgress(formData.progress);
+    // Usar los valores numéricos convertidos en las validaciones
+    const progressValidation = validateTaskProgress(progressValue);
     if (!progressValidation.valid) {
       setCriticalError(progressValidation.error!);
       return;
@@ -280,7 +314,7 @@ export function TaskForm({
       project.total_budget,
       tasks.filter((t) => t.project_id === projectId),
       task?.id,
-      formData.budget_allocated
+      budgetValue // Usar el número
     );
     if (!budgetValidation.valid) {
       setCriticalError(budgetValidation.error!);
@@ -296,8 +330,11 @@ export function TaskForm({
     }
 
     for (const resource of selectedResources) {
+      // Convertir también aquí para la validación del bucle
+      const resourceHoursValue = parseFloat(resource.hours_assigned) || 0;
+
       if (
-        (resource.resource_id !== "" || resource.hours_assigned > 0) &&
+        (resource.resource_id !== "" || resourceHoursValue > 0) && // Usar el número
         (!resource.start_date || !resource.end_date)
       ) {
         setCriticalError(
@@ -328,34 +365,45 @@ export function TaskForm({
       }
     }
 
-    const derivedStatus = deriveStatusFromProgress(
-      formData.progress,
-      isBlocked
-    );
-    const isCompleted = formData.progress === 100;
+    // --- Fin Validaciones ---
 
+    // Usar los números convertidos para derivar el estado
+    const derivedStatus = deriveStatusFromProgress(progressValue, isBlocked);
+    const isCompleted = progressValue === 100;
+
+    // Construir el objeto final sobreescribiendo los strings con los números
     const finalTaskData: NewTask = {
       ...formData,
+      progress: progressValue, // Sobreescribir
+      estimated_hours: estimatedHoursValue, // Sobreescribir
+      budget_allocated: budgetValue, // Sobreescribir
       status: derivedStatus,
       completed: isCompleted,
     };
 
+    // Convertir las horas de recursos a número ANTES de filtrar y guardar
     const validResources: Omit<NewResourceAssignment, "task_id">[] =
       selectedResources
+        .map((r) => ({
+          ...r,
+          // Convertir a número aquí
+          hours_assigned_num: parseFloat(r.hours_assigned) || 0,
+        }))
         .filter(
           (r) =>
             r.resource_id !== "" &&
-            r.hours_assigned > 0 &&
+            r.hours_assigned_num > 0 && // Filtrar usando el número
             r.start_date &&
             r.end_date
         )
         .map((r) => ({
           resource_id: r.resource_id,
-          hours_assigned: r.hours_assigned,
+          hours_assigned: r.hours_assigned_num, // Guardar el número
           start_date: r.start_date,
           end_date: r.end_date,
         }));
 
+    // Enviar datos
     if (task) {
       onSave({ ...finalTaskData, id: task.id }, validResources);
     } else {
@@ -363,7 +411,11 @@ export function TaskForm({
     }
   };
 
-  const derivedStatus = deriveStatusFromProgress(formData.progress, isBlocked);
+  // Lógica de labels para mostrar estado
+  const derivedStatus = deriveStatusFromProgress(
+    parseInt(formData.progress, 10) || 0, // Convertir para mostrar
+    isBlocked
+  );
   const statusLabels = {
     not_started: "Sin Iniciar",
     in_progress: "En Progreso",
@@ -494,13 +546,21 @@ export function TaskForm({
             type="number"
             min="0"
             max="100"
-            value={formData.progress}
+            value={formData.progress} // Muestra el string
             onChange={(e) =>
               setFormData({
                 ...formData,
-                progress: Math.min(100, Math.max(0, Number(e.target.value))),
+                progress: e.target.value, // Guarda el string
               })
             }
+            onBlur={(e) => {
+              // Opcional: formatea el número en onBlur
+              const num = Math.min(
+                100,
+                Math.max(0, parseInt(e.target.value, 10) || 0)
+              );
+              setFormData({ ...formData, progress: String(num) });
+            }}
             disabled={isDisabled}
           />
         </div>
@@ -512,12 +572,16 @@ export function TaskForm({
             checked={isBlocked}
             onChange={(e) => setIsBlocked(e.target.checked)}
             className="w-4 h-4 rounded border-input bg-background disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isDisabled || formData.progress === 100}
+            disabled={
+              isDisabled || (parseInt(formData.progress, 10) || 0) === 100
+            }
           />
           <label
             htmlFor="blocked"
             className={`text-sm text-foreground cursor-pointer ${
-              formData.progress === 100 ? "opacity-50" : ""
+              (parseInt(formData.progress, 10) || 0) === 100
+                ? "opacity-50"
+                : ""
             }`}
           >
             Marcar como bloqueada
@@ -595,11 +659,11 @@ export function TaskForm({
           <Input
             type="number"
             min="0"
-            value={formData.estimated_hours}
+            value={formData.estimated_hours} // Muestra el string
             onChange={(e) =>
               setFormData({
                 ...formData,
-                estimated_hours: Number(e.target.value),
+                estimated_hours: e.target.value, // Guarda el string
               })
             }
             disabled={isDisabled}
@@ -614,12 +678,12 @@ export function TaskForm({
             type="number"
             min="0"
             max={project.total_budget}
-            value={formData.budget_allocated}
+            value={formData.budget_allocated} // Muestra el string
             onChange={(e) => {
               setCriticalError(null);
               setFormData({
                 ...formData,
-                budget_allocated: Number(e.target.value),
+                budget_allocated: e.target.value, // Guarda el string
               });
               if (Number(e.target.value) > project.total_budget) {
                 setCriticalError(
@@ -692,12 +756,12 @@ export function TaskForm({
                         type="number"
                         min="0"
                         placeholder="Horas"
-                        value={selected.hours_assigned || ""}
+                        value={selected.hours_assigned} // Muestra el string
                         onChange={(e) =>
                           handleResourceChange(
                             index,
                             "hours_assigned",
-                            Number(e.target.value)
+                            e.target.value // Guarda el string
                           )
                         }
                         className="text-sm"
