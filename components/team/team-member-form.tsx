@@ -136,6 +136,7 @@ export function TeamMemberForm({ member, onSave, onCancel }: TeamMemberFormProps
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           placeholder="Contraseña0!"
+          type="password"
           className="mt-1.5"
         />
       </div>
