@@ -21,6 +21,7 @@ export function TeamMemberForm({ member, onSave, onCancel }: TeamMemberFormProps
     phone: member?.phone || "",
     email: member?.email || "",
     domicilio: member?.domicilio || "",
+    password:member?.password || ""
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -43,6 +44,9 @@ export function TeamMemberForm({ member, onSave, onCancel }: TeamMemberFormProps
     }
     if (!formData.phone.trim()) {
       newErrors.phone = "El teléfono es requerido"
+    }
+    if (!formData.password.trim()) {
+      newErrors.password = "La contraseña es requerida"
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -122,6 +126,16 @@ export function TeamMemberForm({ member, onSave, onCancel }: TeamMemberFormProps
           value={formData.domicilio}
           onChange={(e) => setFormData({ ...formData, domicilio: e.target.value })}
           placeholder="Calle, número, ciudad"
+          className="mt-1.5"
+        />
+      </div>
+      <div>
+        <Label htmlFor="password">Contraseña</Label>
+        <Input
+          id="password"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          placeholder="Contraseña0!"
           className="mt-1.5"
         />
       </div>
