@@ -2,7 +2,7 @@
 
 import { FolderIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Project, Task } from "@/lib/project-types"
+import type { Client, Project, Task } from "@/lib/project-types"
 import { calculateProjectProgress, formatPercentage } from "@/lib/project-utils"
 import { motion } from "framer-motion"
 
@@ -10,11 +10,13 @@ interface ProjectListProps {
   projects: Project[]
   tasks: Task[]
   selectedProjectId: string
+  clients:Client[]
   onSelectProject: (projectId: string) => void
   onAddProject: () => void
 }
 
-export function ProjectList({ projects, tasks, selectedProjectId, onSelectProject, onAddProject }: ProjectListProps) {
+export function ProjectList({ projects, tasks, selectedProjectId,clients, onSelectProject, onAddProject }: ProjectListProps) {
+  console.log(clients)
   return (
     <aside className="w-72 md:w-80 border-r border-border bg-card overflow-y-auto h-full">
       <div className="p-3 md:p-4">
@@ -36,11 +38,13 @@ export function ProjectList({ projects, tasks, selectedProjectId, onSelectProjec
             },
           }}
         >
+        
           {projects.map((project) => {
             const projectTasks = tasks.filter((t) => t.project_id === project.id)
             const completedTasks = projectTasks.filter((t) => t.status === "completed").length
             const progress = calculateProjectProgress(projectTasks)
-
+            const client = clients.find((client)=> client.id === project.client_id)
+console.log(client)
             return (
               <motion.button
                 key={project.id}
@@ -62,6 +66,7 @@ export function ProjectList({ projects, tasks, selectedProjectId, onSelectProjec
                   <FolderIcon className="h-4 md:h-5 w-4 md:w-5 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm md:text-base text-foreground truncate">{project.name}</h3>
+                    <p className="font-medium text-sm md:text-base text-foreground truncate">Cliente: {client ? client?.name :"Sin cliente"}</p>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{project.description}</p>
                     <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                       <span>

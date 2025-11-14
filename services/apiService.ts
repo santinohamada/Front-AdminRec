@@ -17,6 +17,7 @@ import type {
   UUID,
   NewResourceAssignment,
   NewTeamMember,
+  Client,
 } from "@/lib/project-types";
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
@@ -29,6 +30,7 @@ const STORAGE_KEYS = {
   resources: "mock_resources",
   team: "mock_team",
   assignments: "mock_assignments",
+  client:"mock_client"
 } as const;
 
 function getLocalData<T>(key: keyof typeof STORAGE_KEYS, fallback: T): T {
@@ -394,6 +396,12 @@ export const assignmentService = {
     return apiFetch("/assignments");
   },
 };
+export const clientService = {
+  async getClient(): Promise<Client[]> {
+   
+    return apiFetch("/clients");
+  },
+}
 export const authService = {
   async login(email: string, password: string): Promise<TeamMember> {
     if (USE_MOCKS) {

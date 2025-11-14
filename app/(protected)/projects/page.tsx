@@ -54,6 +54,7 @@ import type {
   NewTask,
   NewResourceAssignment, // Importado para el casteo en handleSaveTask
 } from "@/lib/project-types";
+import { useClient } from "@/hooks/useClient";
 
 export default function ProjectManagementSystem() {
   const { dialogState, confirm, closeDialog } = useConfirmDialog();
@@ -81,6 +82,7 @@ export default function ProjectManagementSystem() {
   const { data: tasks = [], isLoading: loadingTasks } = useTasks();
   const { data: resources = [] } = useResources();
   const { data: teamMembers = [] } = useTeam();
+  const {data: clients = []} = useClient()
   const { data: resourceAssignments = [] } = useAssignments();
 
   // --- Mutations (Usando Hooks) ---
@@ -302,6 +304,7 @@ export default function ProjectManagementSystem() {
             </DialogHeader>
             <ProjectForm
               project={editingProject}
+              clients={clients}
               teamMembers={teamMembers}
               onSave={handleSaveProject}
               onCancel={() => {
@@ -346,6 +349,7 @@ export default function ProjectManagementSystem() {
           <ProjectList
             projects={projects}
             tasks={tasks}
+            clients={clients}
             selectedProjectId={selectedProjectId || projects[0]?.id}
             onSelectProject={handleSelectProject}
             onAddProject={() => {
@@ -484,6 +488,7 @@ export default function ProjectManagementSystem() {
           </DialogHeader>
           <ProjectForm
             project={editingProject}
+            clients={clients}
             teamMembers={teamMembers} // El formulario necesita TODOS los miembros para el selector de 'manager'
             onSave={handleSaveProject}
             onCancel={() => {

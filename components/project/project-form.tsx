@@ -14,25 +14,26 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 // Importamos los tipos
-import type { Project, TeamMember, ProjectStatus } from "@/lib/project-types"
+import type { Project, TeamMember, ProjectStatus, Client } from "@/lib/project-types"
 import { motion } from "framer-motion"
 import { useAuthStore } from "@/store/authStore"
 
 interface ProjectFormProps {
   project?: Project
   teamMembers: TeamMember[]
+  clients:Client[]
   onSave: (projectData: Omit<Project, "id"> | Project) => void
   onCancel: () => void
 }
 
-export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectFormProps) {
+export function ProjectForm({ project, teamMembers,clients, onSave, onCancel }: ProjectFormProps) {
   const currentUser = useAuthStore(state=>state.currentUser)
   const [formData, setFormData] = useState({
     name: project?.name || "",
     description: project?.description || "",
     start_date: project?.start_date || "",
     end_date: project?.end_date || "",
-    // --- CORRECCIÓN 1: Estado inicial como String o "" ---
+    client_id:project?.client_id || clients[0].id,
     total_budget: project?.total_budget ? String(project.total_budget) : "",
     manager_id: project?.manager_id || currentUser!.id,
   })
@@ -74,6 +75,9 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
     // Asumiendo que "0" es el valor del placeholder deshabilitado
     if (!formData.manager_id || formData.manager_id === "0" || formData.manager_id === "team-1") {
       newErrors.manager_id = "El responsable del proyecto es requerido"
+    }
+    if (!formData.client_id ) {
+      newErrors.client_id = "El cliente del proyecto es requerido"
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -165,6 +169,28 @@ export function ProjectForm({ project, teamMembers, onSave, onCancel }: ProjectF
           </SelectContent>
         </Select>
         {errors.manager_id && <p className="text-sm text-destructive mt-1">{errors.manager_id}</p>}
+      </motion.div>
+      <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}>
+        <Label htmlFor="cliente">Cliente del Proyecto</Label>
+        <Select
+          value={formData.client_id}
+          onValueChange={(value: string) => setFormData({ ...formData, client_id: value })}
+        >
+          <SelectTrigger className="mt-1.5">
+            <SelectValue placeholder="Seleccione el Cliente del proyecto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0" disabled>
+              Seleccione un cliente...
+            </SelectItem>
+            {clients.map((client) => (
+              <SelectItem key={client.id} value={client.id.toString()}>
+                {client.name} 
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.client_id && <p className="text-sm text-destructive mt-1">{errors.client_id}</p>}
       </motion.div>
 
       {/* --- Campos de Fechas --- */}

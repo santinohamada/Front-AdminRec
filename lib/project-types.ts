@@ -12,7 +12,10 @@ export interface TeamMember {
   domicilio:string;
   password:string
 }
-
+export interface Client{
+  id:UUID
+  name:string
+}
 // Resuelta la referencia circular: Manager tiene project_ids
 export interface Manager {
   id: UUID;
@@ -28,7 +31,8 @@ export interface Project {
   start_date: string;
   end_date: string;
   total_budget: number;
-  manager_id: UUID; // <- ID en lugar de objeto
+  manager_id: UUID; 
+  client_id:UUID
   status: ProjectStatus;
 }
 
